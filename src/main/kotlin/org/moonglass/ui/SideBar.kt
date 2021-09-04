@@ -31,7 +31,6 @@ import styled.styledDiv
 class SideBar : RComponent<Props, State>() {
 
     companion object {
-        private val menuWidth = 12.rem
 
         private val menuStyle = object : MenuStyle {
             override fun CssBuilder.style() {
@@ -50,8 +49,8 @@ class SideBar : RComponent<Props, State>() {
         styledDiv {
             name = "sideBar"
             css {
-                top = NavBar.barHeight
-                width = menuWidth
+                top = ResponsiveLayout.navBarEmHeight.rem
+                width = ResponsiveLayout.sideBarEmWidth.rem
                 borderRightWidth = 1.px
                 borderStyle = BorderStyle.solid
                 borderColor = Color.grey

@@ -102,7 +102,7 @@ fun MenuItemProps.copyFrom(template: MenuItemTemplate) {
             "/images/$it"
     }
     action = template.action
-    selected = template.menuId == App.instance?.state?.requestedContent?.menuId
+    selected = template.menuId == Content.selectedItemId
 }
 
 // convenience class for building menu lists.

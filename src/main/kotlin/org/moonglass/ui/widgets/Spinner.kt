@@ -44,7 +44,7 @@ class Spinner : RComponent<Props, State>() {
                 position = Position.fixed;
                 top = 50.pct
                 left = 50.pct
-                transform { translate(50.pct, 50.pct) }
+                transform { translate((-50).pct, 50.pct) }
             }
             styledDiv {
                 attrs { role = "status" }

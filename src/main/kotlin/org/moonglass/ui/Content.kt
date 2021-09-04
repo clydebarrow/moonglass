@@ -28,25 +28,30 @@ import react.Props
 import react.RBuilder
 import react.RComponent
 import react.State
+import react.setState
 import styled.css
 import styled.styledDiv
 
-external interface ContentProps: Props {
+external interface ContentState : State {
     var requested: MainMenu.MainMenuItem
 }
 
-class Content : RComponent<ContentProps, State>() {
+class Content : RComponent<Props, ContentState>() {
 
-    override fun shouldComponentUpdate(nextProps: ContentProps, nextState: State): Boolean {
-        if(nextProps.requested.menuId != props.requested.menuId) {
-            when(nextProps.requested.menuId) {
-                "recordings" -> Unit
-                else -> {
-                    Toast.toast("${nextProps.requested.title} not implemented")
-                }
-            }
-        }
-        return true
+    override fun componentDidMount() {
+        instance = this
+    }
+
+    override fun componentWillUnmount() {
+        instance = null
+    }
+
+    override fun ContentState.init() {
+        requested = MainMenu.menu.first().items.first()
+
+    }
+    override fun ContentState.init(props: Props) {
+        init()
     }
 
     override fun RBuilder.render() {
@@ -61,18 +66,31 @@ class Content : RComponent<ContentProps, State>() {
                 borderCollapse = BorderCollapse.collapse
                 borderRightWidth = 1.px
                 borderColor = Color.lightGray
-                padding(0.5.rem)
+                //padding(0.5.rem)
                 overflow = Overflow.auto
                 justifyContent = JustifyContent.center
                 alignContent = Align.start
             }
-            props.requested.apply {
+            state.requested.apply {
                 console.log("Showing content $menuId")
-                when (menuId) {
-                    "recordings" -> child(Recordings::class) {}
-                    else -> {
-                        +title
-                    }
+                state.requested.clazz?.also {
+                    child(it) {}
+                } ?: +title
+            }
+        }
+    }
+
+    companion object {
+        var instance: Content? = null
+
+        val selectedItemId: String? get() = instance?.state?.requested?.menuId
+
+        fun requestContent(item: MainMenu.MainMenuItem) {
+            instance?.apply {
+                if (item.clazz == null)
+                    Toast.toast("No content implemented for ${item.title}")
+                setState {
+                    requested = item
                 }
             }
         }

@@ -73,6 +73,8 @@ val Long.asSize: String
             return "$mb MiB"
         return "$tb TiB"
     }
+
+
 val RecList.Recording.duration get() = (endTime90k - startTime90k).toDuration
 val RecList.Recording.fps get() = videoSamples / duration.inWholeSeconds.coerceAtLeast(1)
 val RecList.Recording.storage get() = sampleFileBytes.asSize

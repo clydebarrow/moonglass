@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-import org.moonglass.ui.App
+package org.moonglass.ui.video
 
-fun main() {
-    App.render()
+interface VideoSource {
+    val srcUrl: String
+    val caption: String
+    fun setAspectCallback(callback: (Double) -> Unit)
 }

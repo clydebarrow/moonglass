@@ -30,12 +30,11 @@ import kotlinx.css.px
 import kotlinx.css.rem
 import kotlinx.css.textAlign
 import kotlinx.css.vh
-import kotlinx.css.width
 import kotlinx.css.zIndex
 import kotlinx.datetime.Clock
-import org.moonglass.ui.App
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.name
+import org.moonglass.ui.utility.Timer
 import react.Props
 import react.RBuilder
 import react.RComponent
@@ -45,28 +44,15 @@ import react.dom.onTransitionEnd
 import react.setState
 import styled.css
 import styled.styledDiv
-import kotlin.js.Date
 
-external interface ToastProps : Props {
+external interface ToastState : State {
     var message: String     // message to show
     var urgency: Toast.Urgency
     var displayState: Toast.State
+    var until: Long
 }
 
-class Toast : RComponent<ToastProps, State>() {
-
-    companion object {
-        val fadeoutDuration = 600
-
-        fun toast(message: String, urgency: Urgency = Urgency.Normal, durationSecs: Int = 6) {
-            App.instance?.setState {
-                toastMessage = message
-                toastUrgency = urgency
-                toastState = State.Shown
-                toastUntil = Clock.System.now().toEpochMilliseconds() + durationSecs * 1000L
-            }
-        }
-    }
+class Toast : RComponent<Props, ToastState>() {
 
     enum class Urgency(val color: Color) {
         Normal(Color.darkBlue),
@@ -78,6 +64,44 @@ class Toast : RComponent<ToastProps, State>() {
         Hidden,
         Fading,
         Shown
+    }
+
+    companion object {
+
+        private var instance: Toast? = null
+
+        private val fadeoutDuration = 600
+
+        fun toast(message: String, urgency: Urgency = Urgency.Normal, durationSecs: Int = 6) {
+            instance?.setState {
+                this.message = message
+                this.urgency = urgency
+                displayState = State.Shown
+                this.until = Clock.System.now().toEpochMilliseconds() + durationSecs * 1000L
+            }
+        }
+    }
+
+    private val toastTimer = Timer()
+
+    override fun ToastState.init(props: Props) {
+        init()
+    }
+
+    override fun ToastState.init() {
+        until = 0
+        message = ""
+        urgency = Urgency.Normal
+        until = 0
+        displayState = State.Hidden
+    }
+
+    override fun componentDidMount() {
+        instance = this
+    }
+
+    override fun componentWillUnmount() {
+        instance = null
     }
 
     override fun RBuilder.render() {
@@ -103,13 +127,25 @@ class Toast : RComponent<ToastProps, State>() {
                 maxWidth = 400.px
                 fontSize = 1.2.rem
                 transition("all", fadeoutDuration.ms)
-                opacity = when(props.displayState) {
+                opacity = when (state.displayState) {
                     State.Shown -> 1.0
                     else -> 0.0
                 }
-                display = if(props.displayState == State.Hidden) Display.none else Display.block
+                display = if (state.displayState == State.Hidden) Display.none else Display.block
             }
-            +props.message
+            if (state.displayState != State.Hidden) {
+                val delay = (state.until - Clock.System.now().toEpochMilliseconds()).toInt()
+                if (delay > fadeoutDuration) {
+                    toastTimer.start(delay - fadeoutDuration) {
+                        setState { displayState = State.Fading }
+                    }
+                } else
+                    toastTimer.start(delay) {
+                        setState { displayState = State.Hidden }
+                    }
+            } else
+                toastTimer.cancel()
+            +state.message
         }
     }
 }

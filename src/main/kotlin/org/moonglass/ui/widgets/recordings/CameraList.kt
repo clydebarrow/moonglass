@@ -24,13 +24,6 @@ import kotlinx.css.maxHeight
 import kotlinx.css.opacity
 import kotlinx.css.overflow
 import kotlinx.css.padding
-import kotlinx.css.paddingLeft
-import kotlinx.css.properties.deg
-import kotlinx.css.properties.ms
-import kotlinx.css.properties.rotate
-import kotlinx.css.properties.scaleY
-import kotlinx.css.properties.transform
-import kotlinx.css.properties.transition
 import kotlinx.css.px
 import kotlinx.css.rem
 import kotlinx.css.textAlign
@@ -38,6 +31,7 @@ import kotlinx.css.vh
 import kotlinx.css.width
 import kotlinx.html.DIV
 import kotlinx.html.js.onClickFunction
+import org.moonglass.ui.ResponsiveLayout
 import org.moonglass.ui.Time90k
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.api.RecList
@@ -49,7 +43,13 @@ import org.moonglass.ui.api.getStartTime
 import org.moonglass.ui.api.storage
 import org.moonglass.ui.cardStyle
 import org.moonglass.ui.name
+import org.moonglass.ui.style.column
+import org.moonglass.ui.style.expandButton
+import org.moonglass.ui.style.shrinkable
 import org.moonglass.ui.toDuration
+import org.moonglass.ui.video.LiveSource
+import org.moonglass.ui.video.RecordingSource
+import org.moonglass.ui.video.VideoSource
 import react.Props
 import react.RBuilder
 import react.RComponent
@@ -75,8 +75,7 @@ external interface CameraListProps : Props {
 
     // callbacks
     var toggleStream: (String) -> Unit
-    var showVideo: (Stream, RecList.Recording) -> Unit
-    var showLive: (Stream) -> Unit
+    var showVideo: (VideoSource) -> Unit
 }
 
 class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraListState>(props) {
@@ -118,6 +117,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
     private fun StyledDOMBuilder<DIV>.streamHeader(stream: Stream) {
         name = "streamHeader"
         val isSelected = stream.key in props.selectedStreams
+        val recordings = stream.recList.recordings
         styledDiv {
             attrs {
                 onClickFunction = { props.toggleStream(stream.key) }
@@ -127,18 +127,12 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                 display = Display.flex
                 flexDirection = FlexDirection.row
                 backgroundColor = Color.lightBlue.lighten(20)
-                paddingLeft = 1.rem
+                padding(left = 1.rem, right = 6.px)
                 color = Color.black
                 flexWrap = FlexWrap.wrap
             }
-            styledImg(src = "/images/play.svg") {
-                css {
-                    transition("all", 300.ms)
-                    width = 20.px
-                    if (isSelected)
-                        transform { rotate(90.deg) }
-                }
-            }
+            // show expanded state
+            expandButton(isSelected)
             styledDiv {
                 css {
                     display = Display.flex
@@ -167,7 +161,12 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                         onClickFunction = {
                             it.preventDefault()
                             it.stopPropagation()
-                            props.showLive(stream)
+                            props.showVideo(
+                                LiveSource(
+                                    stream.wsUrl,
+                                    "Live: ${stream.camera.shortName} (${stream.name}"
+                                )
+                            )
                         }
                 }
                 css {
@@ -179,35 +178,23 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
             }
         }
         styledDiv {
+            shrinkable(isSelected, (recordings.size * 2).rem)
             css {
-                classes.add("shrinkable")
                 display = Display.flex
                 flexGrow = 1.0
                 flexDirection = FlexDirection.column
-                padding(left = 4.rem)
+                padding(left = 2.rem, right = 6.px)
                 // hide the recording rows using maxHeight, with transition, so opening and closing is smooth.
-                transform {
-                    scaleY(if (isSelected) 1.0 else 0.0)
-                }
-                if (isSelected) {
-                    maxHeight = (stream.recList.recordings.size * 2).rem
-                    opacity = 1.0
-                } else {
-                    maxHeight = 0.px
-                    overflow = Overflow.hidden
-                    opacity = 0.0
-                }
-                transition("all", 300.ms)
             }
 
-            stream.recList.recordings.sortedByDescending { it.endTime90k }.forEach { recording ->
+            recordings.sortedByDescending { it.endTime90k }.forEach { recording ->
                 val resolution =
                     stream.recList.videoSampleEntries[recording.videoSampleEntryId]?.let {
                         "${it.width}x${it.height}"
                     } ?: ""
                 styledButton {
                     attrs {
-                        onClickFunction = { props.showVideo(stream, recording) }
+                        onClickFunction = { props.showVideo(RecordingSource(stream, recording)) }
                     }
                     css {
                         display = Display.flex
@@ -217,7 +204,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                     }
                     with(recording) {
                         column(getStartDate(props.minStart), 0.20, JustifyContent.start)
-                        column("${getStartTime(props.minStart)}-${getEndTime(props.maxEnd)}", 0.30)
+                        column("${getStartTime(props.minStart)} - ${getEndTime(props.maxEnd)}", 0.30)
                         column(resolution, 0.125)
                         column("${fps}fps", 0.125)
                         column(storage, 0.125)
@@ -242,28 +229,14 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
     }
 
 
-    private fun StyledDOMBuilder<*>.column(
-        value: String,
-        weight: Double,
-        justify: JustifyContent = JustifyContent.end
-    ) {
-        styledDiv {
-            css {
-                display = Display.flex
-                flex(weight, 0.0, 0.px)
-                padding(left = 0.25.rem, right = 0.25.rem)
-                justifyContent = justify
-            }
-            +value
-        }
-    }
-
     override fun RBuilder.render() {
         styledDiv {
             name = "CameraScroller"
-            cardStyle()
             css {
-                maxHeight = 40.vh
+                if (ResponsiveLayout.isPortrait)
+                    maxHeight = 40.vh
+                else
+                    maxHeight = 80.vh
                 overflow = Overflow.auto
                 display = Display.flex
                 flexDirection = FlexDirection.column

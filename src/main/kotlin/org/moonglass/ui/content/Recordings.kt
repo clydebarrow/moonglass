@@ -10,35 +10,31 @@ import kotlinx.css.FlexWrap
 import kotlinx.css.JustifyContent
 import kotlinx.css.alignItems
 import kotlinx.css.display
-import kotlinx.css.flex
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
 import kotlinx.css.flexWrap
 import kotlinx.css.justifyContent
-import kotlinx.css.maxHeight
 import kotlinx.css.padding
 import kotlinx.css.pct
 import kotlinx.css.properties.ms
 import kotlinx.css.properties.transition
-import kotlinx.css.px
 import kotlinx.css.rem
-import kotlinx.css.vh
 import kotlinx.css.width
 import kotlinx.serialization.Serializable
 import org.moonglass.ui.App
+import org.moonglass.ui.ResponsiveLayout
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.api.RecList
-import org.moonglass.ui.api.getEndTime
-import org.moonglass.ui.api.getStartDate
-import org.moonglass.ui.api.getStartTime
 import org.moonglass.ui.applyState
 import org.moonglass.ui.as90k
-import org.moonglass.ui.live.LiveSource
+import org.moonglass.ui.cardStyle
 import org.moonglass.ui.name
 import org.moonglass.ui.plusHours
 import org.moonglass.ui.plusSeconds
 import org.moonglass.ui.utility.SavedState
 import org.moonglass.ui.video.Player
+import org.moonglass.ui.video.RecordingSource
+import org.moonglass.ui.video.VideoSource
 import org.moonglass.ui.widgets.recordings.CameraList
 import org.moonglass.ui.widgets.recordings.DateTimeSelector
 import org.moonglass.ui.widgets.recordings.Stream
@@ -47,6 +43,7 @@ import react.Props
 import react.RBuilder
 import react.RComponent
 import react.State
+import react.setState
 import styled.css
 import styled.styledDiv
 import kotlin.js.Date
@@ -58,15 +55,17 @@ external interface RecordingsState : State {
     var apiData: Api?
     var cameras: Map<Api.Camera, List<Stream>>
     var selectedStreams: MutableSet<String>
-    var playingStream: Stream?
-    var playingRecording: RecList.Recording?
+
+    // time selector state
     var startDate: Date
     var startTime: Int      // time of day in seconds
     var endTime: Int        // also inseconds
     var maxDuration: Int
     var trimEnds: Boolean
     var caption: Boolean
-    var liveSource: LiveSource?
+
+    var videoSource: VideoSource?
+    var selectorShowing: Boolean
 }
 
 val RecordingsState.startDateTime: Date
@@ -108,9 +107,6 @@ fun RecordingsState.copyFrom(saved: SavedRecordingState) {
 @JsExport
 class Recordings() : RComponent<Props, RecordingsState>() {
 
-    companion object {
-        const val saveKey = "recordingsKey"
-    }
 
     private val RecordingsState.maxEndDateTime get() = if (trimEnds) endDateTime.as90k else Long.MAX_VALUE
     private val RecordingsState.minStartDateTime get() = if (trimEnds) startDateTime.as90k else 0
@@ -118,8 +114,21 @@ class Recordings() : RComponent<Props, RecordingsState>() {
 
     private val streamsNeedingRefresh = mutableSetOf<String>()
 
+    override fun componentDidMount() {
+        instance = this
+    }
+
+    override fun componentWillUnmount() {
+        instance = null
+        SavedState.save(
+            saveKey,
+            SavedRecordingState.from(state)
+        )
+    }
+
 
     override fun RecordingsState.init() {
+        selectorShowing = true
         apiData = null
         cameras = mapOf()
         val restored = try {
@@ -187,47 +196,41 @@ class Recordings() : RComponent<Props, RecordingsState>() {
         }
     }
 
-    override fun componentWillUnmount() {
-        SavedState.save(
-            saveKey,
-            SavedRecordingState.from(state)
-        )
-    }
-
     override fun RBuilder.render() {
         styledDiv {
             name = "Outer"
             css {
                 display = Display.flex
-                flexDirection = FlexDirection.column
+                flexDirection = if (ResponsiveLayout.isPortrait) FlexDirection.column else FlexDirection.row
                 alignItems = Align.start
                 width = 100.pct
                 flexGrow = 1.0
-                flexWrap = FlexWrap.wrap
+                flexWrap = FlexWrap.nowrap
             }
             styledDiv {
                 name = "StreamGroup"
                 css {
                     display = Display.flex
                     width = 100.pct
-                    maxHeight = 50.vh
-                    flexDirection = FlexDirection.row
+                    flexDirection = FlexDirection.column
                     alignItems = Align.start
-                    flex(1.0, 0.0, 0.px)
                 }
                 styledDiv {
                     name = "SelectionGroup"
                     css {
                         display = Display.flex
                         width = 100.pct
-                        flexDirection = FlexDirection.row
+                        flexDirection = FlexDirection.column
                         alignItems = Align.start
                     }
                     styledDiv {
                         name = "SelectorColumn"
+
+                        cardStyle()
                         css {
                             display = Display.flex
                             flexDirection = FlexDirection.column
+                            width = 100.pct
                         }
                         child(DateTimeSelector::class) {
                             attrs {
@@ -236,45 +239,6 @@ class Recordings() : RComponent<Props, RecordingsState>() {
                                 startDate = state.startDate
                                 maxDuration = state.maxDuration
                                 caption = state.caption
-                                onDateChange = {
-                                    applyState {
-                                        if (startDate.getTime() != it.getTime()) {
-                                            startDate = it
-                                            updateRecordings()
-                                        }
-                                    }
-                                }
-                                onStartChange = {
-                                    applyState {
-                                        if (startTime != it) {
-                                            startTime = it
-                                            updateRecordings()
-                                        }
-                                    }
-                                }
-                                onEndChange = {
-                                    applyState {
-                                        if (endTime != it) {
-                                            endTime = it
-                                            updateRecordings()
-                                        }
-                                    }
-                                }
-                                onTrimChange = {
-                                    applyState {
-                                        trimEnds = it
-                                        updateRecordings()
-                                    }
-                                }
-                                onMaxDurationChange = {
-                                    applyState {
-                                        if (maxDuration != it) {
-                                            maxDuration = it
-                                            updateRecordings()
-                                        }
-                                    }
-                                }
-                                onCaptionChange = { applyState { caption = it } }
                             }
                         }
                     }
@@ -283,7 +247,7 @@ class Recordings() : RComponent<Props, RecordingsState>() {
                         css {
                             display = Display.flex
                             transition("all", 300.ms)
-                            flexGrow = 1.0
+                            width = 100.pct
                         }
                         child(CameraList::class) {
                             attrs {
@@ -298,24 +262,16 @@ class Recordings() : RComponent<Props, RecordingsState>() {
                                         }
                                     }
                                 }
-                                showVideo = { stream, recording ->
+                                showVideo = {
                                     applyState {
-                                        liveSource?.close()
-                                        liveSource = null
-                                        playingStream = stream
-                                        playingRecording = recording
-                                    }
-                                }
-                                showLive = {
-                                    applyState {
-                                        liveSource = LiveSource(it.wsUrl, it.toString())
-                                        playingStream = null
+                                        videoSource = it
+                                        DateTimeSelector.collapse()
                                     }
                                 }
                                 selectedStreams = state.selectedStreams
                                 maxEnd = state.maxEndDateTime
                                 minStart = state.minStartDateTime
-                                playingRecording = state.playingRecording
+                                playingRecording = (state.videoSource as? RecordingSource)?.recording
                             }
                         }
                     }
@@ -331,20 +287,35 @@ class Recordings() : RComponent<Props, RecordingsState>() {
                 }
                 child(Player::class) {
                     attrs {
-                        title = "---"
-                        state.liveSource?.let {
-                            src = it.srcUrl
-                            title = "Live: ${it.title}"
-
-                        } ?: state.playingStream?.let { stream ->
-                            state.playingRecording?.let { rec ->
-                                src = stream.url(rec, state.caption)
-                                title = "$stream ${rec.getStartDate()} ${rec.getStartTime()}-${rec.getEndTime()}"
-                            }
-                        }
+                        source = state.videoSource
+                        availableWidth = ResponsiveLayout.playerWidth
+                        availableHeight = ResponsiveLayout.playerHeight
                     }
                 }
             }
         }
+    }
+
+    companion object {
+        const val saveKey = "recordingsKey"
+
+        var instance: Recordings? = null
+
+        fun <T : Any> notify(value: T, update: Boolean = true, block: RecordingsState.(T) -> Unit) {
+            instance?.apply {
+                setState {
+                    block(value)
+                    if (update)
+                        updateRecordings()
+                }
+            }
+        }
+
+        fun onStartDate(value: Date) = notify(value) { startDate = value }
+        fun onStartTime(value: Int) = notify(value) { startTime = value }      // time of day in seconds
+        fun onEndTime(value: Int) = notify(value) { endTime = value }         // also inseconds
+        fun onMaxDuration(value: Int) = notify(value) { maxDuration = value }
+        fun onTrimEnds(value: Boolean) = notify(value) { trimEnds = value }
+        fun onCaption(value: Boolean) = notify(value, false) { caption = value }
     }
 }

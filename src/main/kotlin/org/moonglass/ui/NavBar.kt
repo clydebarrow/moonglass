@@ -56,9 +56,6 @@ external interface NavBarState : react.State {
 
 class NavBar(props: Props) : RComponent<Props, NavBarState>(props) {
 
-    companion object {
-        val barHeight = 5.rem
-    }
     override fun NavBarState.init(props: Props) {
         userMenuOpen = false
         mainMenuOpen = false
@@ -80,7 +77,6 @@ class NavBar(props: Props) : RComponent<Props, NavBarState>(props) {
     }
 
     override fun RBuilder.render() {
-        ResponsiveLayout.context.Consumer { windowSize ->
             styledDiv {
                 css {
                     display = Display.flex
@@ -96,10 +92,8 @@ class NavBar(props: Props) : RComponent<Props, NavBarState>(props) {
 
                     // keep at top of window in bigger screen modes.
                     position = Position.fixed
-                    top = 0.px
-                    left = 0.px
                     zIndex = ZIndex.NavBar()
-                    height = barHeight
+                    height = ResponsiveLayout.navBarEmHeight.rem
                 }
 
                 // left side of navbar, has icon, title and menu widget in smaller modes
@@ -127,7 +121,7 @@ class NavBar(props: Props) : RComponent<Props, NavBarState>(props) {
                         +Theme.title
                     }
                     // menu button shown only in small layouts
-                    if (windowSize <= ResponsiveLayout.Size.medium) {
+                    if (!ResponsiveLayout.showSideMenu) {
                         styledButton {
                             css {
                                 flex(0.0, 0.0, LinearDimension.none)
@@ -171,7 +165,7 @@ class NavBar(props: Props) : RComponent<Props, NavBarState>(props) {
                             padding(left = 0.5.rem, right = 0.5.rem, top = 0.5.rem)
                         }
                     }
-                    if (!windowSize.mobile)
+                    if (!ResponsiveLayout.current.mobile)
                         styledImg(src = "/images/profile.svg") {
                             css {
                                 height = 2.rem
@@ -195,6 +189,5 @@ class NavBar(props: Props) : RComponent<Props, NavBarState>(props) {
                     }
                 }
             }
-        }
     }
 }

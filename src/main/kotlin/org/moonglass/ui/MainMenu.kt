@@ -1,14 +1,16 @@
 package org.moonglass.ui
 
-import react.setState
+import org.moonglass.ui.content.Recordings
+import react.Props
+import react.RComponent
+import react.State
+import kotlin.reflect.KClass
 
 object MainMenu {
 
     private fun onSelected(id: String) {
         items[id]?.let {
-            App.instance?.setState {
-                requestedContent = it
-            }
+            Content.requestContent(it)
         }
     }
 
@@ -18,7 +20,7 @@ object MainMenu {
                 .replaceFirstChar { it.lowercase() }
         }
 
-    class MainMenuItem(title: String) :
+    class MainMenuItem(title: String, val clazz: KClass<out RComponent<in Props, out State>>? = null) :
         MenuItemTemplate(
             title.camelCase,
             title,
@@ -31,7 +33,7 @@ object MainMenu {
         MenuGroup(
             "Video",
             listOf(
-                MainMenuItem("Recordings"),
+                MainMenuItem("Recordings", Recordings::class),
                 MainMenuItem("Live view"),
             )
         ),
