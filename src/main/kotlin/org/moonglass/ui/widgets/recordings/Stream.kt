@@ -4,6 +4,8 @@ import kotlinx.browser.window
 import org.moonglass.ui.Duration90k
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.api.RecList
+import org.moonglass.ui.formatDate
+import org.moonglass.ui.formatTime
 import org.moonglass.ui.url
 import kotlin.js.Date
 
@@ -20,6 +22,12 @@ data class Stream(val name: String, val metaData: Api.ApiStream, var recList: Re
 
     override fun hashCode(): Int {
         return key.hashCode()
+    }
+
+    fun filename(recording: RecList.Recording): String {
+        return camera.shortName + "-" + name + "-" +
+            recording.startTime90k.formatDate + "-" +
+            recording.startTime90k.formatTime + recording.endTime90k.formatTime + ".mp4"
     }
 
     fun url(recording: RecList.Recording, caption: Boolean): String {

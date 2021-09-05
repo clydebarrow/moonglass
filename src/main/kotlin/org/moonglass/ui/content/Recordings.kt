@@ -4,20 +4,35 @@ import kotlinx.browser.window
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.css.Align
+import kotlinx.css.Color
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.FlexWrap
 import kotlinx.css.JustifyContent
+import kotlinx.css.LinearDimension
+import kotlinx.css.alignContent
 import kotlinx.css.alignItems
+import kotlinx.css.borderBottomColor
+import kotlinx.css.borderBottomWidth
+import kotlinx.css.borderLeftColor
+import kotlinx.css.borderLeftWidth
 import kotlinx.css.display
+import kotlinx.css.flex
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
 import kotlinx.css.flexWrap
+import kotlinx.css.height
 import kotlinx.css.justifyContent
+import kotlinx.css.marginLeft
+import kotlinx.css.marginRight
+import kotlinx.css.marginTop
+import kotlinx.css.maxHeight
 import kotlinx.css.padding
+import kotlinx.css.paddingBottom
 import kotlinx.css.pct
 import kotlinx.css.properties.ms
 import kotlinx.css.properties.transition
+import kotlinx.css.px
 import kotlinx.css.rem
 import kotlinx.css.width
 import kotlinx.serialization.Serializable
@@ -27,7 +42,6 @@ import org.moonglass.ui.api.Api
 import org.moonglass.ui.api.RecList
 import org.moonglass.ui.applyState
 import org.moonglass.ui.as90k
-import org.moonglass.ui.cardStyle
 import org.moonglass.ui.name
 import org.moonglass.ui.plusHours
 import org.moonglass.ui.plusSeconds
@@ -105,7 +119,7 @@ fun RecordingsState.copyFrom(saved: SavedRecordingState) {
 
 
 @JsExport
-class Recordings() : RComponent<Props, RecordingsState>() {
+class Recordings(props: Props) : RComponent<Props, RecordingsState>(props) {
 
 
     private val RecordingsState.maxEndDateTime get() = if (trimEnds) endDateTime.as90k else Long.MAX_VALUE
@@ -127,7 +141,7 @@ class Recordings() : RComponent<Props, RecordingsState>() {
     }
 
 
-    override fun RecordingsState.init() {
+    override fun RecordingsState.init(props: Props) {
         selectorShowing = true
         apiData = null
         cameras = mapOf()
@@ -201,9 +215,14 @@ class Recordings() : RComponent<Props, RecordingsState>() {
             name = "Outer"
             css {
                 display = Display.flex
-                flexDirection = if (ResponsiveLayout.isPortrait) FlexDirection.column else FlexDirection.row
+                height = 100.pct
+                if (ResponsiveLayout.isPortrait) {
+                    flexDirection = FlexDirection.column
+                    width = 100.pct
+                } else {
+                    flexDirection = FlexDirection.row
+                }
                 alignItems = Align.start
-                width = 100.pct
                 flexGrow = 1.0
                 flexWrap = FlexWrap.nowrap
             }
@@ -211,35 +230,33 @@ class Recordings() : RComponent<Props, RecordingsState>() {
                 name = "StreamGroup"
                 css {
                     display = Display.flex
-                    width = 100.pct
                     flexDirection = FlexDirection.column
                     alignItems = Align.start
+                    flex(1.0, 0.0, 0.px)
+                    if (ResponsiveLayout.isPortrait) {
+                        width = 100.pct
+                        height = ResponsiveLayout.contentHeight
+
+                    } else {
+                        height = 100.pct
+                    }
+                    paddingBottom = 1.rem
                 }
                 styledDiv {
                     name = "SelectionGroup"
                     css {
                         display = Display.flex
                         width = 100.pct
+                        height = 100.pct
                         flexDirection = FlexDirection.column
                         alignItems = Align.start
-                    }
-                    styledDiv {
-                        name = "SelectorColumn"
+                        if (ResponsiveLayout.isPortrait) {
+                            borderBottomWidth = 1.px
+                            borderBottomColor = Color.gray
 
-                        cardStyle()
-                        css {
-                            display = Display.flex
-                            flexDirection = FlexDirection.column
-                            width = 100.pct
-                        }
-                        child(DateTimeSelector::class) {
-                            attrs {
-                                startTime = state.startTime
-                                endTime = state.endTime
-                                startDate = state.startDate
-                                maxDuration = state.maxDuration
-                                caption = state.caption
-                            }
+                        } else {
+                            borderLeftWidth = 1.px
+                            borderLeftColor = Color.gray
                         }
                     }
                     styledDiv {
@@ -248,6 +265,7 @@ class Recordings() : RComponent<Props, RecordingsState>() {
                             display = Display.flex
                             transition("all", 300.ms)
                             width = 100.pct
+                            maxHeight = 100.pct
                         }
                         child(CameraList::class) {
                             attrs {
@@ -280,16 +298,24 @@ class Recordings() : RComponent<Props, RecordingsState>() {
             styledDiv {
                 name = "PlayerGroup"
                 css {
-                    width = 100.pct
                     justifyContent = JustifyContent.center
+                    alignContent = Align.center
                     padding(0.75.rem)
                     display = Display.flex
+                    flex(1.0, 0.0, 0.px)
+                    if (ResponsiveLayout.isPortrait) {
+                        height = ResponsiveLayout.playerHeight
+                        marginLeft = LinearDimension.auto
+                        marginRight = LinearDimension.auto
+                    } else {
+                        marginTop = 0.px
+                    }
+
                 }
                 child(Player::class) {
                     attrs {
+                        key = "MainPlayer"
                         source = state.videoSource
-                        availableWidth = ResponsiveLayout.playerWidth
-                        availableHeight = ResponsiveLayout.playerHeight
                     }
                 }
             }

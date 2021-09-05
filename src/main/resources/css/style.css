@@ -668,3 +668,38 @@ object {
 .container{
   width: 100%;
 }
+
+/**
+Tooltip magic
+ */
+[data-tooltip]:before {
+  content: attr(data-tooltip); /* here's the magic */
+  position:absolute;
+
+  top:-150%;
+
+  /* move to right */
+  left:0;
+  margin-left:15px; /* and add a small left margin */
+
+  /* basic styles */
+  max-width:400px;
+  width: auto;
+  padding:10px;
+  border-radius:5px;
+  background: #FFE7A5FF;
+  color: black;
+  text-align:center;
+  opacity:0;
+  transition:all 0.3s;
+  display: block;
+  pointer-events: none;
+  overflow: visible;
+}
+
+[data-tooltip]:hover:before {
+  opacity: 1;
+  max-height: 3em;
+  transition:all 0.3s 1s;
+  z-index: 60;
+}

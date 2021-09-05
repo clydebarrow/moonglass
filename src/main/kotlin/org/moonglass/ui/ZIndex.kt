@@ -12,7 +12,8 @@ enum class ZIndex(val index: Int) {
     Menu(30),           // menu on top of standard stuff
     Input(40),          // modal input
     Spinner(50),        // busy indicator
-    Toast(60);          // transient feedback
+    Tooltip(60),          // modal input
+    Toast(70);          // transient feedback
 
     // allow simplified syntax
     operator fun invoke() = index

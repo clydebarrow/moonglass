@@ -8,9 +8,7 @@ import kotlinx.css.display
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
 import kotlinx.css.height
-import kotlinx.css.marginTop
 import kotlinx.css.pct
-import kotlinx.css.rem
 import kotlinx.css.vh
 import kotlinx.css.width
 import org.moonglass.ui.widgets.Spinner
@@ -29,6 +27,7 @@ external interface AppState : State {
     var toastUrgency: Toast.Urgency
     var toastState: Toast.State
     var refreshing: MutableSet<String>
+    var contentShowing: MainMenu.MainMenuItem
 }
 
 @JsExport
@@ -39,13 +38,14 @@ class App() : RComponent<Props, AppState>() {
         toastMessage = ""
         toastUrgency = Toast.Urgency.Normal
         toastState = Toast.State.Hidden
+        contentShowing = MainMenu.menu.first().items.first()
     }
 
     override fun componentDidMount() {
+        instance = this
         window.addEventListener("resize", {
             forceUpdate()
         })
-        instance = this
     }
 
     override fun componentWillUnmount() {
@@ -61,18 +61,26 @@ class App() : RComponent<Props, AppState>() {
                 width = 100.pct
                 height = 100.vh
             }
-            child(NavBar::class) {}
+            child(NavBar::class) {
+                attrs {
+                    headerComponent = state.contentShowing.headerComponent
+                }
+            }
             styledDiv {
                 css {
                     flexGrow = 1.0
                     display = Display.flex
                     flexDirection = FlexDirection.row
-                    marginTop = ResponsiveLayout.navBarEmHeight.rem
+                    //marginTop = ResponsiveLayout.navBarEmHeight.rem
                     width = 100.pct
                 }
                 if (ResponsiveLayout.showSideMenu)
                     child(SideBar::class) {}
-                child(Content::class) { }
+                child(Content::class) {
+                    attrs {
+                        contentShowing = state.contentShowing
+                    }
+                }
             }
         }
         child(Toast::class) { attrs { } }
@@ -99,6 +107,17 @@ class App() : RComponent<Props, AppState>() {
             }
         }
 
+        val selectedItemId: String? get() = instance?.state?.contentShowing?.menuId
+
+        fun showContent(item: MainMenu.MainMenuItem) {
+            instance?.apply {
+                if (item.contentComponent == null)
+                    Toast.toast("No content implemented for ${item.title}")
+                setState {
+                    contentShowing = item
+                }
+            }
+        }
         fun render() {
             react.dom.render(document.getElementById("root")) {
                 child(App::class) { }

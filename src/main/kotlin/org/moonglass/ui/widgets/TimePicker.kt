@@ -174,6 +174,22 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
         }
     }
 
+    /**
+     * Handle plus and minus
+     */
+
+    private fun plusMinus(c: Char) {
+        val increment = when(c) {
+            '+' -> 1
+            '-' -> -1
+            else -> return
+        }
+        when (state.cursorPos) {
+            0,1 -> setHours(state.hours + increment)
+            2,3 -> setMinutes(state.minutes + increment)
+        }
+    }
+
     /*
     move the cursor left or right.
      */

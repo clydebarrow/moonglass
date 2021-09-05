@@ -46,15 +46,6 @@ external interface MenuItemProps : react.Props {
     var action: (String) -> Unit
 }
 
-/**
- * A menu item
- *
- * @param menuId An internal name
- * @param title The title displayed to the user
- * @param enabled If the menu is enabled.
- * @param image The name of the image file to display
- * @param action The action to take when the menu is selected. Called with the menu key as an argument
- */
 @JsExport
 class MenuItem(props: MenuItemProps) : RComponent<MenuItemProps, State>(props) {
     override fun RBuilder.render() {
@@ -102,11 +93,18 @@ fun MenuItemProps.copyFrom(template: MenuItemTemplate) {
             "/images/$it"
     }
     action = template.action
-    selected = template.menuId == Content.selectedItemId
+    selected = template.menuId == App.selectedItemId
 }
 
-// convenience class for building menu lists.
-
+/**
+ * A menu item
+ *
+ * @param menuId An internal name
+ * @param title The title displayed to the user
+ * @param enabled If the menu is enabled.
+ * @param image The name of the image file to display
+ * @param action The action to take when the menu is selected. Called with the menu key as an argument
+ */
 open class MenuItemTemplate(
     val menuId: String,
     val title: String,

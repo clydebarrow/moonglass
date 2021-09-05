@@ -17,26 +17,22 @@ import kotlinx.css.display
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
 import kotlinx.css.flexWrap
+import kotlinx.css.height
 import kotlinx.css.justifyContent
 import kotlinx.css.overflow
-import kotlinx.css.padding
 import kotlinx.css.px
-import kotlinx.css.rem
-import org.moonglass.ui.content.Recordings
-import org.moonglass.ui.widgets.Toast
 import react.Props
 import react.RBuilder
 import react.RComponent
 import react.State
-import react.setState
 import styled.css
 import styled.styledDiv
 
-external interface ContentState : State {
-    var requested: MainMenu.MainMenuItem
+external interface ContentProps : Props {
+    var contentShowing: MainMenu.MainMenuItem
 }
 
-class Content : RComponent<Props, ContentState>() {
+class Content : RComponent<ContentProps, State>() {
 
     override fun componentDidMount() {
         instance = this
@@ -44,14 +40,6 @@ class Content : RComponent<Props, ContentState>() {
 
     override fun componentWillUnmount() {
         instance = null
-    }
-
-    override fun ContentState.init() {
-        requested = MainMenu.menu.first().items.first()
-
-    }
-    override fun ContentState.init(props: Props) {
-        init()
     }
 
     override fun RBuilder.render() {
@@ -70,10 +58,11 @@ class Content : RComponent<Props, ContentState>() {
                 overflow = Overflow.auto
                 justifyContent = JustifyContent.center
                 alignContent = Align.start
+                height = ResponsiveLayout.outerHeight
             }
-            state.requested.apply {
+            props.contentShowing.apply {
                 console.log("Showing content $menuId")
-                state.requested.clazz?.also {
+                contentComponent?.also {
                     child(it) {}
                 } ?: +title
             }
@@ -83,17 +72,6 @@ class Content : RComponent<Props, ContentState>() {
     companion object {
         var instance: Content? = null
 
-        val selectedItemId: String? get() = instance?.state?.requested?.menuId
-
-        fun requestContent(item: MainMenu.MainMenuItem) {
-            instance?.apply {
-                if (item.clazz == null)
-                    Toast.toast("No content implemented for ${item.title}")
-                setState {
-                    requested = item
-                }
-            }
-        }
     }
 }
 

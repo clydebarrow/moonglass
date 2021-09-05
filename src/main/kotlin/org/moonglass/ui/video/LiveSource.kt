@@ -49,7 +49,7 @@ import kotlin.collections.set
  * @param caption The video title
  *
  */
-class LiveSource(private val wsUrl: String, override val caption: String): VideoSource {
+class LiveSource(private val wsUrl: String, override val caption: String) : VideoSource {
 
     /**
      * the aspect ratio of the received video. Updated once the stream starts
@@ -84,7 +84,7 @@ class LiveSource(private val wsUrl: String, override val caption: String): Video
     private var callback: ((Double) -> Unit)? = null
     override fun setAspectCallback(callback: (Double) -> Unit) {
         this.callback = callback
-        if(aspectRatio != 0.0)
+        if (aspectRatio != 0.0)
             callback(aspectRatio)
     }
 
@@ -132,27 +132,29 @@ class LiveSource(private val wsUrl: String, override val caption: String): Video
         return data
     }
 
+    // called to transfer data into the SourceBuffer
     private fun transfer() {
-        if (!srcBuffer.updating)
-            bufferQueue.removeFirstOrNull()?.let { data ->
-                val ranges = srcBuffer.buffered
-                val length = ranges.length
-                val rangeEnd = if (length == 0) 0.0 else ranges.end(length - 1)
-                val rangeStart = if (length == 0) 0.0 else ranges.start(0)
-                if (rangeEnd - rangeStart < MAX_TIME) {
+        if (!srcBuffer.updating) {
+            val ranges = srcBuffer.buffered
+            val length = ranges.length
+            val rangeEnd = if (length == 0) 0.0 else ranges.end(length - 1)
+            val rangeStart = if (length == 0) 0.0 else ranges.start(0)
+            // remove data from buffer if more than 5 minutes buffered
+            if (rangeEnd - rangeStart > MAX_TIME) {
+                srcBuffer.remove(rangeStart, rangeStart + MAX_TIME)
+            } else  // append a new buffer if we have one
+                bufferQueue.removeFirstOrNull()?.let { data ->
                     srcBuffer.timestampOffset = rangeEnd
                     mediaSource.setLiveSeekableRange((rangeEnd - MAX_TIME - 60).coerceAtLeast(rangeEnd), rangeEnd)
                     srcBuffer.appendBuffer(data.data)
-                } else
-                    console.log("Discarding data, buffer has ${rangeEnd - rangeStart} seconds buffered")
-            }
+                }
+        }
     }
 
     private suspend fun WebSocketSession.setup() {
         val message = incoming.receive() as Frame.Binary
         val buffer = ByteBuffer(message.data)
         val data = buffer.parseBuffer()
-        //console.log(data.toString())
         if (!MediaSource.isTypeSupported(data.contentType)) {
             Toast.toast("Media type ${data.contentType} not supported")
             throw IllegalArgumentException("Media type not supported")

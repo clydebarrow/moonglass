@@ -4,6 +4,7 @@ import kotlinx.browser.window
 import kotlinx.coroutines.await
 import kotlinx.css.Color
 import kotlinx.css.Display
+import kotlinx.css.PointerEvents
 import kotlinx.css.Position
 import kotlinx.css.backgroundColor
 import kotlinx.css.borderRadius
@@ -12,6 +13,7 @@ import kotlinx.css.display
 import kotlinx.css.left
 import kotlinx.css.margin
 import kotlinx.css.padding
+import kotlinx.css.pointerEvents
 import kotlinx.css.position
 import kotlinx.css.properties.boxShadow
 import kotlinx.css.px
@@ -50,13 +52,18 @@ fun <T : State, P : Props> RComponent<P, T>.applyState(callback: (() -> Unit)? =
 }
 
 /**
- * Join a list of strings into a single string, space separated.
- * Used particularly for class lists in elements
+ * Add a name to an element
  */
 var StyledDOMBuilder<*>.name: String
     get() = attrs["data-name"]
     set(value) {
         attrs["data-name"] = value
+    }
+
+var StyledDOMBuilder<*>.tooltip: String
+    get() = attrs["data-tooltip"]
+    set(value) {
+        attrs["data-tooltip"] = value
     }
 
 /**
@@ -203,7 +210,7 @@ fun Date.after(other: Date): Boolean {
 }
 
 
-fun RBuilder.dismisser(onDismiss: () -> Unit, z: Int = ZIndex.Dismisser(), builder: RBuilder.() -> Unit) {
+fun RBuilder.dismisser(onDismiss: () -> Unit, visible: Boolean = true, z: Int = ZIndex.Dismisser(), builder: RBuilder.() -> Unit) {
     styledDiv {
         name = "dismisser"
         css {
@@ -214,6 +221,10 @@ fun RBuilder.dismisser(onDismiss: () -> Unit, z: Int = ZIndex.Dismisser(), build
             right = 0.px
             backgroundColor = Color.transparent
             zIndex = z
+            if(!visible) {
+                display = Display.none
+                pointerEvents = PointerEvents.none
+            }
         }
         attrs {
             onClickFunction = {

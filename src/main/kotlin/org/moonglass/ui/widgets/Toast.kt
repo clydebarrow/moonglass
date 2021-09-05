@@ -101,6 +101,7 @@ class Toast : RComponent<Props, ToastState>() {
     }
 
     override fun componentWillUnmount() {
+        toastTimer.cancel()
         instance = null
     }
 
