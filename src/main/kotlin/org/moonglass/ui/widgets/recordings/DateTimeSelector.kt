@@ -1,7 +1,6 @@
 package org.moonglass.ui.widgets.recordings
 
 import calendar
-import kotlinx.browser.window
 import kotlinx.css.Align
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
@@ -72,7 +71,7 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
     data class Saver(
         var expanded: Boolean = true,
         var startTime: Int = 0,
-        var endTime: Int = 24 * 60 * 60,
+        var endTime: Int = 24 * 60 * 60 - 1,
         var startDate: Double = Date().let { Date(it.getFullYear(), it.getMonth(), it.getDate()) }.getTime(),
         var maxDuration: Int = 1,
         var trimEnds: Boolean = true,
@@ -91,6 +90,7 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
             }
         )
     }
+
     override fun componentWillUnmount() {
         saveMyStuff()
         instance = null
@@ -172,7 +172,12 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
                     attrs {
                         defaultView = "month"
                         defaultActiveStartDate = state.startDate
-                        onChange = { Recordings.onStartDate(it) }
+                        onChange = {
+                            setState {
+                                startDate = it
+                            }
+                            Recordings.onStartDate(it)
+                        }
                     }
                 }
             }
@@ -193,7 +198,12 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
                 timePicker {
                     initialTime = state.startTime
                     use24HourTime = true
-                    onChange = { Recordings.onStartTime(it) }
+                    onChange = {
+                        setState {
+                            startTime = it
+                        }
+                        Recordings.onStartTime(it)
+                    }
                 }
                 label {
                     +"End time:"
@@ -201,7 +211,12 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
                 timePicker {
                     initialTime = state.endTime
                     use24HourTime = true
-                    onChange = { Recordings.onEndTime(it) }
+                    onChange = {
+                        setState {
+                            endTime = it
+                        }
+                        Recordings.onEndTime(it)
+                    }
                 }
                 label {
                     attrs {
@@ -214,7 +229,12 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
                         attrs["checked"] = ""
                     attrs {
                         id = "trimCheckbox"
-                        onChangeFunction = { Recordings.onTrimEnds(!state.trimEnds) }
+                        onChangeFunction = {
+                            setState {
+                                trimEnds = !trimEnds
+                            }
+                            Recordings.onTrimEnds(state.trimEnds)
+                        }
                     }
                     css {
                         margin(left = 1.5.rem)
@@ -230,7 +250,12 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
                     attrs {
                         id = "captionCheckBox"
                         checked = state.caption
-                        onChangeFunction = { Recordings.onCaption(!state.caption) }
+                        onChangeFunction = {
+                            setState {
+                                caption = !caption
+                            }
+                            Recordings.onCaption(state.caption)
+                        }
                     }
                     css {
                         margin(left = 1.5.rem)
@@ -248,10 +273,11 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
                         value = state.maxDuration.toString()
                         onChangeFunction =
                             {
-                                Recordings.onMaxDuration(
-                                    it.currentTarget
-                                        .unsafeCast<HTMLSelectElement>().value.toInt()
-                                )
+                                val max = it.currentTarget.unsafeCast<HTMLSelectElement>().value.toInt()
+                                setState {
+                                    maxDuration = max
+                                }
+                                Recordings.onMaxDuration(max)
                             }
                     }
                     listOf(1, 4, 8, 24).forEach {
