@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+import org.jetbrains.kotlin.konan.target.HostManager.Companion.host
 import java.io.File
 import java.util.Properties
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("js") version "1.5.30"
@@ -40,31 +40,19 @@ open class PropertiesFile(private val file: File) {
         file.inputStream().use { load(it) }
     }
 
-    fun getBoolean(name: String): Boolean {
-        return get<String>(name) == "true"
-    }
-
-    inline operator fun <reified T : Any> get(name: String): T {
-        return (props[name] as? T) ?: error("Property $name not found")
-    }
-
+    operator fun get(name: String): String? = (props[name] as? String)
 }
 
 val localProperties get() = PropertiesFile(File("local.properties"))
 
+// defaults to true
+val shouldOpen: Boolean = localProperties["openBrowser"] != "false"
 
-val shouldOpen: Boolean = try {
-    localProperties.getBoolean("openBrowser")
-} catch (ex: Exception) {
-    println(ex.toString())
-    true
-}
+val nvrHost: String? = localProperties["nvrHost"]
 
-val nvrHost: String? = try {
-    localProperties["nvrHost"]
-} catch (ex: Exception) {
-    null
-}
+// set up deployment if configured.
+
+val deployTarget: String? = localProperties["deployTarget"]
 
 kotlin {
     js(IR) {
@@ -108,10 +96,14 @@ dependencies {
 
 }
 
-// Heroku Deployment (chapter 9)
-tasks.register("stage") {
-    dependsOn("build")
+if(deployTarget != null) {
+    tasks.register<Exec>("deploy") {
+        dependsOn("browserProductionWebpack")
+        workingDir(File(projectDir, "build/distributions"))
+        commandLine("sh", "-c", "scp -r * $deployTarget")
+    }
 }
+
 kotlin {
     sourceSets.all {
         languageSettings.apply {

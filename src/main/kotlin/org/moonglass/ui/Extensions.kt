@@ -60,6 +60,7 @@ var StyledDOMBuilder<*>.name: String
         attrs["data-name"] = value
     }
 
+// TODO - the css approach to tooltips doesn't work well on mobile. Need to allow an alternative such as long-press
 var StyledDOMBuilder<*>.tooltip: String
     get() = attrs["data-tooltip"]
     set(value) {

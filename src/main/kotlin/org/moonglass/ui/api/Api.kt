@@ -7,6 +7,7 @@ import org.moonglass.ui.fetch
 data class Api(
     val cameras: List<Camera>,
     val signalTypes: List<String>,
+    val session: Session? = null,
     val signals: List<String>,
     val timeZoneName: String // Australia/Sydney
 ) {
@@ -35,6 +36,11 @@ data class Api(
         val retainBytes: Long, // 107374182400
         val totalDuration90k: Long, // 24637266927
         val totalSampleFileBytes: Long // 38776002681
+    )
+    @Serializable
+    data class Session(
+        val username: String,
+        val csrf: String
     )
 
     companion object {

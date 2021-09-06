@@ -61,6 +61,8 @@ class App() : RComponent<Props, AppState>() {
                 width = 100.pct
                 height = 100.vh
             }
+            // TODO - make navbar a child of content so as to maintain proper state management
+
             child(NavBar::class) {
                 attrs {
                     headerComponent = state.contentShowing.headerComponent
@@ -113,11 +115,16 @@ class App() : RComponent<Props, AppState>() {
             instance?.apply {
                 if (item.contentComponent == null)
                     Toast.toast("No content implemented for ${item.title}")
-                setState {
-                    contentShowing = item
-                }
+                // if we are already showing  this content, just refresh it.
+                if (state.contentShowing == item)
+                    item.refresher?.invoke()
+                else
+                    setState {
+                        contentShowing = item
+                    }
             }
         }
+
         fun render() {
             react.dom.render(document.getElementById("root")) {
                 child(App::class) { }

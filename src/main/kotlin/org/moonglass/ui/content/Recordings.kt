@@ -170,7 +170,6 @@ class Recordings(props: Props) : RComponent<Props, RecordingsState>(props) {
         updateRecordings(streamsNeedingRefresh)
     }
 
-
     private fun refreshList() {
         MainScope().launch {
             App.setRefresh("Api", true)
@@ -326,6 +325,10 @@ class Recordings(props: Props) : RComponent<Props, RecordingsState>(props) {
         const val saveKey = "recordingsKey"
 
         var instance: Recordings? = null
+
+        fun refreshAll() {
+            instance?.refreshList()
+        }
 
         fun <T : Any> notify(value: T, update: Boolean = true, block: RecordingsState.(T) -> Unit) {
             instance?.apply {

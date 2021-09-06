@@ -20,10 +20,19 @@ object MainMenu {
                 .replaceFirstChar { it.lowercase() }
         }
 
+    /**
+     * Create a main menu entry
+     * @param title The title of the menu content
+     * @param contentComponent The React component to render the content
+     * @param headerComponent An optional react component to render in the Navbar
+     * @param refresher A function to refresh an already showing content component
+     */
+    
     class MainMenuItem(
         title: String,
         val contentComponent: KClass<out RComponent<Props, *>>? = null,
-        val headerComponent: KClass<out RComponent<Props, *>>? = null
+        val headerComponent: KClass<out RComponent<Props, *>>? = null,
+        val refresher: (() -> Unit)? = null
     ) :
         MenuItemTemplate(
             title.camelCase,
@@ -37,7 +46,7 @@ object MainMenu {
         MenuGroup(
             "Video",
             listOf(
-                MainMenuItem("Recordings", Recordings::class, DateTimeSelector::class),
+                MainMenuItem("Recordings", Recordings::class, DateTimeSelector::class, { Recordings.refreshAll()}),
                 MainMenuItem("Live view"),
             )
         ),
