@@ -1,5 +1,7 @@
 package org.moonglass.ui.widgets.recordings
 
+import io.ktor.http.URLBuilder
+import io.ktor.http.URLProtocol
 import kotlinx.browser.window
 import org.moonglass.ui.Duration90k
 import org.moonglass.ui.api.Api
@@ -40,8 +42,13 @@ data class Stream(val name: String, val metaData: Api.ApiStream, var recList: Re
     }
 
     val wsUrl = window.location.let {
-        val scheme = if (it.protocol == "https") "wss" else "ws"
-        "$scheme://${it.host}/api/cameras/$key/live.m4s"
+        URLBuilder().apply {
+            path("api/cameras/$key/live.m4s")
+            protocol = if (window.location.protocol == "https") URLProtocol.WSS else URLProtocol.WS
+            window.location.port.toIntOrNull()?.let { port = it }
+        }.build().also {
+            console.log("wsurl = $it")
+        }
     }
 
     suspend fun fetchRecordings(startDateTime: Date, endDateTime: Date, maxDuration: Duration90k): RecList {

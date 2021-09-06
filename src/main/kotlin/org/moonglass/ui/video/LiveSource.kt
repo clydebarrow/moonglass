@@ -20,10 +20,16 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.js.Js
 import io.ktor.client.features.websocket.WebSockets
 import io.ktor.client.features.websocket.webSocket
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
+import io.ktor.client.request.url
 import io.ktor.client.statement.HttpResponse
+import io.ktor.http.URLProtocol
+import io.ktor.http.Url
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.WebSocketSession
+import io.ktor.http.isSecure
+import io.ktor.http.takeFrom
 import io.ktor.utils.io.core.readBytes
 import kotlinx.browser.window
 import kotlinx.coroutines.MainScope
@@ -49,7 +55,7 @@ import kotlin.collections.set
  * @param caption The video title
  *
  */
-class LiveSource(private val wsUrl: String, override val caption: String) : VideoSource {
+class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSource {
 
     /**
      * the aspect ratio of the received video. Updated once the stream starts
@@ -115,21 +121,23 @@ class LiveSource(private val wsUrl: String, override val caption: String) : Vide
      */
 
     private suspend fun getInitializationSegment(id: Int): ByteArray {
-        val response: HttpResponse = client.get {
+        val url = HttpRequestBuilder().apply {
             url {
-                // for some reason the defaults set by URLBuilder don't include the port
-                window.location.port.toIntOrNull()?.let { port = it }
+                takeFrom(wsUrl)
+                protocol = if (wsUrl.protocol.isSecure()) URLProtocol.HTTPS else URLProtocol.HTTP
                 path("api", "init", "$id.mp4")
             }
         }
+        console.log("window.location = ${window.location}, protocol=${window.location.protocol}")
+        console.log("url = ${url.build()}")
+        val response: HttpResponse = client.get(url)
         // if there is an X-Aspect header, parse it in the form 16:9, convert this to 16/9
         response.headers["X-Aspect"]?.let { headerText ->
             headerText.split(':').map { it.toIntOrNull() }.let {
                 it[0]?.toDouble()?.div(it[1]?.toDouble() ?: 1.0)
             }
         }?.let { aspectRatio = it }
-        val data = response.content.readRemaining(100000, 0).readBytes()
-        return data
+        return response.content.readRemaining(100000, 0).readBytes()
     }
 
     // called to transfer data into the SourceBuffer
@@ -139,8 +147,9 @@ class LiveSource(private val wsUrl: String, override val caption: String) : Vide
             val length = ranges.length
             val rangeEnd = if (length == 0) 0.0 else ranges.end(length - 1)
             val rangeStart = if (length == 0) 0.0 else ranges.start(0)
-            // remove data from buffer if more than 5 minutes buffered
-            if (rangeEnd - rangeStart > MAX_TIME) {
+            // remove data from buffer if more than 5 minutes buffered. Allow some hysteresis.
+            if (rangeEnd - rangeStart > MAX_TIME * 1.5) {
+                console.log("time range $rangeStart-$rangeEnd, removing some")
                 srcBuffer.remove(rangeStart, rangeStart + MAX_TIME)
             } else  // append a new buffer if we have one
                 bufferQueue.removeFirstOrNull()?.let { data ->
@@ -179,7 +188,11 @@ class LiveSource(private val wsUrl: String, override val caption: String) : Vide
      */
     private fun start() {
         scope.launch {
-            client.webSocket(wsUrl) {
+            client.webSocket({
+                url {
+                    url(wsUrl)
+                }
+            }) {
                 try {
                     setup()
                     while (mediaSource.readyState == ReadyState.OPEN) {
@@ -288,6 +301,6 @@ class LiveSource(private val wsUrl: String, override val caption: String) : Vide
 
     companion object {
         const val MAX_BUFFER = 5
-        const val MAX_TIME = 5 * 60       // don't buffer more than 5 minutes
+        const val MAX_TIME = 6 * 60       // don't buffer more than 5 minutes
     }
 }
