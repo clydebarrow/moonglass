@@ -70,6 +70,7 @@ external interface CameraListState : State
 
 external interface CameraListProps : Props {
     var cameras: Map<Api.Camera, List<Stream>>
+    var recLists: Map<String, RecList>
     var selectedStreams: Set<String>
     var minStart: Time90k
     var maxEnd: Time90k
@@ -114,6 +115,8 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
             }
         }
     }
+
+    private val Stream.recList get() = props.recLists[key] ?: RecList()
 
     private fun StyledDOMBuilder<DIV>.streamHeader(stream: Stream) {
         val isSelected = stream.key in props.selectedStreams
@@ -195,7 +198,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                 styledButton {
                     val bitwhole = recording.bitrate.toInt()
                     val bitfrac = ((recording.bitrate - bitwhole.toDouble()) * 10).roundToInt()
-                    tooltip = "${resolution} ${recording.fps}fps ${recording.storage} $bitwhole.$bitfrac Mbps"
+                    tooltip = "$resolution ${recording.fps}fps ${recording.storage} $bitwhole.$bitfrac Mbps"
                     attrs {
                         onClickFunction = { props.showVideo(RecordingSource(stream, recording)) }
                     }

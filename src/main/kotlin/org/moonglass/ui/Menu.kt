@@ -44,6 +44,7 @@ interface MenuStyle {
 
 class ContextStyle(private val horz: Double, private val vert: Double) : MenuStyle {
     override fun CssBuilder.style() {
+        padding(1.rem)
         position = Position.absolute
         if (vert >= 0)
             top = vert.rem

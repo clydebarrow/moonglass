@@ -9,6 +9,7 @@ import kotlinx.css.Position
 import kotlinx.css.TextAlign
 import kotlinx.css.alignContent
 import kotlinx.css.backgroundColor
+import kotlinx.css.borderColor
 import kotlinx.css.borderRadius
 import kotlinx.css.borderWidth
 import kotlinx.css.bottom
@@ -73,6 +74,7 @@ class Toast : RComponent<Props, ToastState>() {
         private val fadeoutDuration = 600
 
         fun toast(message: String, urgency: Urgency = Urgency.Normal, durationSecs: Int = 6) {
+            console.log(message)
             instance?.setState {
                 this.message = message
                 this.urgency = urgency
@@ -97,10 +99,12 @@ class Toast : RComponent<Props, ToastState>() {
     }
 
     override fun componentDidMount() {
-        instance = this
+        console.log("Toast: ComponentDidMount")
+        instance = this@Toast
     }
 
     override fun componentWillUnmount() {
+        console.log("Toast: ComponentWillUnmount")
         toastTimer.cancel()
         instance = null
     }
@@ -109,6 +113,7 @@ class Toast : RComponent<Props, ToastState>() {
         styledDiv {
             name = "Toast"
             attrs {
+                key = "ToastElement"
                 onTransitionEnd = { forceUpdate() }
             }
             css {
@@ -120,8 +125,9 @@ class Toast : RComponent<Props, ToastState>() {
                 left = 50.pct
                 transform { translate(-50.pct, 0.pct) }
                 bottom = 20.vh
-                backgroundColor = Color.lightGray
+                backgroundColor = Color.gray
                 borderWidth = 1.px
+                borderColor = Color.darkBlue
                 borderRadius = 10.px
                 padding(10.px)
                 justifyContent = JustifyContent.center

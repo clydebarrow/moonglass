@@ -2,6 +2,7 @@ package org.moonglass.ui.widgets.recordings
 
 import calendar
 import kotlinx.css.Align
+import kotlinx.css.Cursor
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.GridTemplateColumns
@@ -9,6 +10,7 @@ import kotlinx.css.JustifyContent
 import kotlinx.css.Position
 import kotlinx.css.alignContent
 import kotlinx.css.alignItems
+import kotlinx.css.cursor
 import kotlinx.css.display
 import kotlinx.css.flexDirection
 import kotlinx.css.gridTemplateColumns
@@ -25,18 +27,14 @@ import kotlinx.html.InputType
 import kotlinx.html.id
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
-import kotlinx.serialization.Serializable
 import org.moonglass.ui.ZIndex
-import org.moonglass.ui.applyState
 import org.moonglass.ui.cardStyle
-import org.moonglass.ui.content.Recordings
 import org.moonglass.ui.dismisser
 import org.moonglass.ui.formatDate
 import org.moonglass.ui.formatHhMm
 import org.moonglass.ui.name
 import org.moonglass.ui.style.expandButton
 import org.moonglass.ui.style.shrinkable
-import org.moonglass.ui.utility.SavedState
 import org.moonglass.ui.widgets.timePicker
 import org.w3c.dom.HTMLSelectElement
 import react.Props
@@ -47,7 +45,6 @@ import react.dom.KeyboardEvent
 import react.dom.ReactHTML.label
 import react.dom.attrs
 import react.dom.onKeyDown
-import react.setState
 import styled.css
 import styled.styledDiv
 import styled.styledInput
@@ -55,64 +52,31 @@ import styled.styledOption
 import styled.styledSelect
 import kotlin.js.Date
 
-external interface DateTimeSelectorState : State {
+external interface DateTimeSelectorProps : Props {
     var expanded: Boolean
-    var startTime: Int  // times of day in seconds
+    var startTime: Int
     var endTime: Int
     var startDate: Date
-    var maxDuration: Int        // in hours
+    var maxDuration: Int
     var trimEnds: Boolean
     var caption: Boolean
+    var setExpanded: (Boolean) -> Unit
+    var setStartTime: (Int) -> Unit
+    var setEndTime: (Int) -> Unit
+    var setStartDate: (Date) -> Unit
+    var setMaxDuration: (Int) -> Unit
+    var setTrimEnds: (Boolean) -> Unit
+    var setCaption: (Boolean) -> Unit
 }
 
-class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
-
-    @Serializable
-    data class Saver(
-        var expanded: Boolean = true,
-        var startTime: Int = 0,
-        var endTime: Int = 24 * 60 * 60 - 1,
-        var startDate: Double = Date().let { Date(it.getFullYear(), it.getMonth(), it.getDate()) }.getTime(),
-        var maxDuration: Int = 1,
-        var trimEnds: Boolean = true,
-        var caption: Boolean = false
-    )
-
-    override fun componentDidMount() {
-        instance = this
-        SavedState.onUnload(::saveMyStuff)
-    }
-
-    private fun saveMyStuff() {
-        SavedState.save(saveKey,
-            state.run {
-                Saver(expanded, startTime, endTime, startDate.getTime(), maxDuration, trimEnds, caption)
-            }
-        )
-    }
-
-    override fun componentWillUnmount() {
-        saveMyStuff()
-        instance = null
-    }
-
-    override fun DateTimeSelectorState.init() {
-        val saved = SavedState.restore(saveKey) ?: Saver()
-        expanded = saved.expanded
-        startDate = Date(saved.startDate)
-        startTime = saved.startTime
-        endTime = saved.endTime
-        trimEnds = saved.trimEnds
-        caption = saved.caption
-        maxDuration = saved.maxDuration
-    }
+class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
 
     private fun keyDown(event: KeyboardEvent<*>) {
         event.apply {
             preventDefault()
             stopPropagation()
             when (key) {
-                "Escape" -> setState { expanded = false }
+                "Escape" -> props.setExpanded(false)
             }
         }
     }
@@ -121,7 +85,10 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
         styledDiv {
             name = "selectedDateTime"
             attrs {
-                onClickFunction = { applyState { expanded = !expanded } }
+                onClickFunction = {
+                    console.log("onclick expanded ${props.expanded}")
+                    props.setExpanded(!props.expanded)
+                }
                 onKeyDown = ::keyDown
             }
             css {
@@ -130,11 +97,14 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
                 alignContent = Align.center
                 flexDirection = FlexDirection.row
                 position = Position.relative
+                cursor = Cursor.pointer
+                if(props.expanded)
+                    zIndex = ZIndex.Input()
             }
-            expandButton(state.expanded)
+            expandButton(props.expanded)
             listOf(
-                state.startDate.formatDate,
-                "${state.startTime.formatHhMm} - ${state.endTime.formatHhMm}"
+                props.startDate.formatDate,
+                "${props.startTime.formatHhMm} - ${props.endTime.formatHhMm}"
             ).forEach {
                 styledDiv {
                     css {
@@ -146,12 +116,10 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
                 +it
             }
         }
-        dismisser({ collapse() }, visible = state.expanded) {}
+        dismisser({ props.setExpanded(false) }, visible = props.expanded) {}
         styledDiv {
-            attrs {
-                key = "dateTimeSelector"
-            }
-            shrinkable(state.expanded, 50.rem)
+            name = "DateTimeSelectorExpandable"
+            shrinkable(props.expanded, 50.rem)
             cardStyle()
             css {
                 position = Position.absolute
@@ -171,13 +139,8 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
                 calendar {
                     attrs {
                         defaultView = "month"
-                        defaultActiveStartDate = state.startDate
-                        onChange = {
-                            setState {
-                                startDate = it
-                            }
-                            Recordings.onStartDate(it)
-                        }
+                        defaultActiveStartDate = props.startDate
+                        onChange = { props.setStartDate(it) }
                     }
                 }
             }
@@ -196,27 +159,17 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
                     +"Start time:"
                 }
                 timePicker {
-                    initialTime = state.startTime
+                    initialTime = props.startTime
                     use24HourTime = true
-                    onChange = {
-                        setState {
-                            startTime = it
-                        }
-                        Recordings.onStartTime(it)
-                    }
+                    onChange = { props.setStartTime(it) }
                 }
                 label {
                     +"End time:"
                 }
                 timePicker {
-                    initialTime = state.endTime
+                    initialTime = props.endTime
                     use24HourTime = true
-                    onChange = {
-                        setState {
-                            endTime = it
-                        }
-                        Recordings.onEndTime(it)
-                    }
+                    onChange = { props.setEndTime(it) }
                 }
                 label {
                     attrs {
@@ -225,16 +178,11 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
                     +"Trim to start/end:"
                 }
                 styledInput(InputType.checkBox) {
-                    if (state.trimEnds)
+                    if (props.trimEnds)
                         attrs["checked"] = ""
                     attrs {
                         id = "trimCheckbox"
-                        onChangeFunction = {
-                            setState {
-                                trimEnds = !trimEnds
-                            }
-                            Recordings.onTrimEnds(state.trimEnds)
-                        }
+                        onChangeFunction = { props.setTrimEnds(!props.trimEnds) }
                     }
                     css {
                         margin(left = 1.5.rem)
@@ -249,13 +197,8 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
                 styledInput(InputType.checkBox) {
                     attrs {
                         id = "captionCheckBox"
-                        checked = state.caption
-                        onChangeFunction = {
-                            setState {
-                                caption = !caption
-                            }
-                            Recordings.onCaption(state.caption)
-                        }
+                        checked = props.caption
+                        onChangeFunction = { props.setCaption(!props.caption) }
                     }
                     css {
                         margin(left = 1.5.rem)
@@ -270,14 +213,11 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
                 styledSelect {
                     attrs {
                         id = "maxDurationSelect"
-                        value = state.maxDuration.toString()
+                        value = props.maxDuration.toString()
                         onChangeFunction =
                             {
                                 val max = it.currentTarget.unsafeCast<HTMLSelectElement>().value.toInt()
-                                setState {
-                                    maxDuration = max
-                                }
-                                Recordings.onMaxDuration(max)
+                                props.setMaxDuration(max)
                             }
                     }
                     listOf(1, 4, 8, 24).forEach {
@@ -290,15 +230,6 @@ class DateTimeSelector : RComponent<Props, DateTimeSelectorState>() {
                     }
                 }
             }
-        }
-    }
-
-    companion object {
-        const val saveKey = "dateTimeSelectorSavedState"
-        var instance: DateTimeSelector? = null
-
-        fun collapse() {
-            instance?.setState { expanded = false }
         }
     }
 }

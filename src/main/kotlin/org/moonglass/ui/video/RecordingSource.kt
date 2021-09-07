@@ -27,11 +27,5 @@ class RecordingSource(stream: Stream, val recording: RecList.Recording) : VideoS
     override val caption = "$stream ${recording.getStartDate()} ${recording.getStartTime()}-${recording.getEndTime()}"
 
     override val srcUrl: String = stream.url(recording, false)
-    val aspectRatio: Double = stream.recList.videoSampleEntries[recording.videoSampleEntryId]?.let {
-        it.aspectWidth.toDouble() / it.aspectHeight.toDouble()
-    } ?: 1.333
 
-    override fun setAspectCallback(callback: (Double) -> Unit) {
-        callback(aspectRatio)
-    }
 }

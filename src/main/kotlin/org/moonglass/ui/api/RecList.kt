@@ -42,21 +42,6 @@ data class RecList(
     )
 
     companion object {
-        // /api/cameras/7f2e2a50-1e68-4647-817b-03089ca2003e/sub/recordings?startTime90k=146706552000000&endTime90k=146714328000000&split90k=324000000
-        suspend fun fetchRecording(
-            stream: Stream,
-            startTime: Date,
-            endTime: Date,
-            maxDuration: Duration90k
-        ): RecList {
-            return "/api/cameras/${stream.camera.uuid}/${stream.name}/recordings".fetch(
-                mapOf(
-                    "startTime90k" to startTime.as90k,
-                    "endTime90k" to endTime.as90k,
-                    "split90k" to maxDuration
-                )
-            )
-        }
     }
 }
 

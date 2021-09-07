@@ -1,17 +1,15 @@
 package org.moonglass.ui.widgets.recordings
 
 import io.ktor.http.URLBuilder
-import io.ktor.http.URLProtocol
 import kotlinx.browser.window
-import org.moonglass.ui.Duration90k
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.api.RecList
+import org.moonglass.ui.api.setDefaults
 import org.moonglass.ui.formatDate
 import org.moonglass.ui.formatTime
 import org.moonglass.ui.url
-import kotlin.js.Date
 
-data class Stream(val name: String, val metaData: Api.ApiStream, var recList: RecList, val camera: Api.Camera) {
+data class Stream(val name: String, val metaData: Api.ApiStream, val camera: Api.Camera) {
     val key = "${camera.uuid}/${name}"
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -43,24 +41,8 @@ data class Stream(val name: String, val metaData: Api.ApiStream, var recList: Re
 
     val wsUrl = window.location.let {
         URLBuilder().apply {
-            path("api/cameras/$key/live.m4s")
-            protocol = if (window.location.protocol == "https") URLProtocol.WSS else URLProtocol.WS
-            window.location.port.toIntOrNull()?.let { port = it }
-        }.build().also {
-            console.log("wsurl = $it")
-        }
-    }
-
-    suspend fun fetchRecordings(startDateTime: Date, endDateTime: Date, maxDuration: Duration90k): RecList {
-        console.log("Fetching recording for $key, startDate=$startDateTime, end=$endDateTime")
-        return RecList.fetchRecording(
-            this@Stream,
-            startDateTime,
-            endDateTime,
-            maxDuration
-        ).also {
-            console.log("Fetched ${it.recordings.size} recordings for ${camera.shortName}/${name}")
-        }
+            setDefaults("cameras", key, "live.m4s", websocket = true)
+        }.build()
     }
 
     override fun toString(): String {

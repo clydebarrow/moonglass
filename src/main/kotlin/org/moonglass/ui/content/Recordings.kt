@@ -37,6 +37,9 @@ import kotlinx.css.rem
 import kotlinx.css.width
 import kotlinx.serialization.Serializable
 import org.moonglass.ui.App
+import org.moonglass.ui.Content
+import org.moonglass.ui.ContentProps
+import org.moonglass.ui.NavBar
 import org.moonglass.ui.ResponsiveLayout
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.api.RecList
@@ -64,11 +67,10 @@ import kotlin.js.Date
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 
-
 external interface RecordingsState : State {
-    var apiData: Api?
-    var cameras: Map<Api.Camera, List<Stream>>
     var selectedStreams: MutableSet<String>
+    var cameras: Map<Api.Camera, List<Stream>>
+    var recLists: MutableMap<String, RecList>
 
     // time selector state
     var startDate: Date
@@ -77,9 +79,9 @@ external interface RecordingsState : State {
     var maxDuration: Int
     var trimEnds: Boolean
     var caption: Boolean
+    var expanded: Boolean
 
     var videoSource: VideoSource?
-    var selectorShowing: Boolean
 }
 
 val RecordingsState.startDateTime: Date
@@ -95,15 +97,25 @@ val RecordingsState.endDateTime: Date
 @Serializable
 data class SavedRecordingState(
     val selectedStreams: List<String> = listOf(),
-    var maxDuration: Int = 8, // hours
+    var expanded: Boolean = true,
+    var startTime: Int = 0,
+    var endTime: Int = 24 * 60 * 60 - 1,
+    var startDate: Double = Date().let { Date(it.getFullYear(), it.getMonth(), it.getDate()) }.getTime(),
+    var maxDuration: Int = 1,
     var trimEnds: Boolean = true,
     var caption: Boolean = false
+
 ) {
     companion object {
         fun from(state: RecordingsState): SavedRecordingState {
             return SavedRecordingState(
                 state.selectedStreams.toList(),
+                state.expanded,
+                state.startTime,
+                state.endTime,
+                state.startDate.getTime(),
                 state.maxDuration,
+                state.trimEnds,
                 state.caption
             )
         }
@@ -115,24 +127,34 @@ fun RecordingsState.copyFrom(saved: SavedRecordingState) {
     trimEnds = saved.trimEnds
     caption = saved.caption
     selectedStreams = saved.selectedStreams.toMutableSet()
+    startDate = Date(saved.startDate)
+    startTime = saved.startTime
+    endTime = saved.endTime
+    expanded = saved.expanded
 }
 
 
 @JsExport
-class Recordings(props: Props) : RComponent<Props, RecordingsState>(props) {
-
+class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(props) {
 
     private val RecordingsState.maxEndDateTime get() = if (trimEnds) endDateTime.as90k else Long.MAX_VALUE
     private val RecordingsState.minStartDateTime get() = if (trimEnds) startDateTime.as90k else 0
     private val RecordingsState.allStreams get() = cameras.values.flatten()
 
-    private val streamsNeedingRefresh = mutableSetOf<String>()
+    private fun saveMyStuff() {
+        SavedState.save(
+            saveKey,
+            SavedRecordingState.from(state)
+        )
+    }
 
     override fun componentDidMount() {
-        instance = this
+        instance = this@Recordings
+        SavedState.onUnload(::saveMyStuff)
     }
 
     override fun componentWillUnmount() {
+        saveMyStuff()
         instance = null
         SavedState.save(
             saveKey,
@@ -140,11 +162,18 @@ class Recordings(props: Props) : RComponent<Props, RecordingsState>(props) {
         )
     }
 
+    private val cameras: Map<Api.Camera, List<Stream>>
+        get() {
+            return props.api.cameras.map { camera ->
+                camera to camera.streams.map {
+                    Stream(it.key, it.value, camera)
+                }
+            }.toMap()
+        }
 
-    override fun RecordingsState.init(props: Props) {
-        selectorShowing = true
-        apiData = null
-        cameras = mapOf()
+    override fun RecordingsState.init(props: ContentProps) {
+        expanded = true
+        recLists = mutableMapOf()
         val restored = try {
             SavedState.restore(saveKey) ?: SavedRecordingState()
         } catch (ex: Exception) {
@@ -155,7 +184,6 @@ class Recordings(props: Props) : RComponent<Props, RecordingsState>(props) {
         startDate = Date().withTime(0, 0)
         startTime = 0
         endTime = Duration.days(1).toInt(DurationUnit.SECONDS) - 1
-        refreshList()
         window.addEventListener("beforeunload", {
             SavedState.save(saveKey, SavedRecordingState.from(state))
         })
@@ -166,155 +194,183 @@ class Recordings(props: Props) : RComponent<Props, RecordingsState>(props) {
      * streams, but this doesn't seem to work - the list is the same. So instead we keep track in the callbacks
      * of any streams changed to selected state, and refresh them here
      */
-    override fun componentDidUpdate(prevProps: Props, prevState: RecordingsState, snapshot: Any) {
-        updateRecordings(streamsNeedingRefresh)
+    override fun componentDidUpdate(prevProps: ContentProps, prevState: RecordingsState, snapshot: Any) {
+        updateRecordings()
     }
 
-    private fun refreshList() {
-        MainScope().launch {
-            App.setRefresh("Api", true)
-            val list = Api.fetch()
-            applyState {
-                apiData = list
-                cameras = list.cameras.map { camera ->
-                    camera to camera.streams.map {
-                        Stream(it.key, it.value, RecList(), camera)
-                    }
-                }.toMap()
-                selectedStreams.intersect(allStreams.map { it.key })
-            }
-            App.setRefresh("Api", false)
-            updateRecordings()
-        }
-    }
-
-    private fun updateRecordings(needy: Collection<String> = state.selectedStreams) {
+    private fun updateRecordings() {
+        val needy = cameras.values.flatten().filter { it.key in state.selectedStreams && it.key !in state.recLists }
         if (needy.isNotEmpty()) {
-            val streams = state.cameras.values.flatten().filter { it.key in needy }
-            streamsNeedingRefresh.clear()
+            // prevent repeating the fetch below.
+            needy.forEach { state.recLists[it.key] = RecList() }
             MainScope().launch {
-                App.setRefresh("UpdateRecordings", true)
-                streams.forEach { cameraStream ->
-                    val data = cameraStream.fetchRecordings(
+                val updates = needy.map { cameraStream ->
+                    Api.fetchRecording(
+                        cameraStream,
                         state.startDateTime,
                         state.endDateTime,
                         Duration.hours(state.maxDuration).as90k
-                    )
-                    applyState {
-                        cameraStream.recList = data
+                    )?.let { data ->
+                        console.log("Fetched ${data.recordings.size} recordings for $cameraStream")
+                        Pair(cameraStream.key, data)
                     }
+                }.filterNotNull()
+                applyState {
+                    recLists.putAll(updates)
                 }
-                App.setRefresh("UpdateRecordings", false)
             }
         }
+    }
+
+    // update state, optionally calling refreshList() on completion of the state update.
+    private fun <T : State, P : Props> RComponent<P, T>.notify(doRefresh: Boolean = true, handler: T.() -> Unit) {
+        if (doRefresh)
+            applyState(App::refreshAll) { handler() }
+        else
+            applyState { handler() }
     }
 
     override fun RBuilder.render() {
         styledDiv {
-            name = "Outer"
             css {
-                display = Display.flex
+                width = 100.pct
                 height = 100.pct
-                if (ResponsiveLayout.isPortrait) {
-                    flexDirection = FlexDirection.column
-                    width = 100.pct
-                } else {
-                    flexDirection = FlexDirection.row
-                }
-                alignItems = Align.start
-                flexGrow = 1.0
-                flexWrap = FlexWrap.nowrap
             }
-            styledDiv {
-                name = "StreamGroup"
-                css {
-                    display = Display.flex
-                    flexDirection = FlexDirection.column
-                    alignItems = Align.start
-                    flex(1.0, 0.0, 0.px)
-                    if (ResponsiveLayout.isPortrait) {
-                        width = 100.pct
-                        height = ResponsiveLayout.contentHeight
-
-                    } else {
-                        height = 100.pct
-                    }
-                    paddingBottom = 1.rem
-                }
-                styledDiv {
-                    name = "SelectionGroup"
-                    css {
-                        display = Display.flex
-                        width = 100.pct
-                        height = 100.pct
-                        flexDirection = FlexDirection.column
-                        alignItems = Align.start
-                        if (ResponsiveLayout.isPortrait) {
-                            borderBottomWidth = 1.px
-                            borderBottomColor = Color.gray
-
-                        } else {
-                            borderLeftWidth = 1.px
-                            borderLeftColor = Color.gray
-                        }
-                    }
-                    styledDiv {
-                        name = "CameraList"
-                        css {
-                            display = Display.flex
-                            transition("all", 300.ms)
-                            width = 100.pct
-                            maxHeight = 100.pct
-                        }
-                        child(CameraList::class) {
+            name = "RecordingsContent"
+            child(NavBar::class) {
+                attrs {
+                    api = props.api
+                    renderWidget = {
+                        it.child(DateTimeSelector::class) {
                             attrs {
-                                cameras = state.cameras
-                                toggleStream = { key ->
-                                    applyState {
-                                        if (key in selectedStreams)
-                                            selectedStreams.remove(key)
-                                        else {
-                                            selectedStreams.add(key)
-                                            streamsNeedingRefresh.add(key)
-                                        }
-                                    }
-                                }
-                                showVideo = {
-                                    applyState {
-                                        videoSource = it
-                                        DateTimeSelector.collapse()
-                                    }
-                                }
-                                selectedStreams = state.selectedStreams
-                                maxEnd = state.maxEndDateTime
-                                minStart = state.minStartDateTime
-                                playingRecording = (state.videoSource as? RecordingSource)?.recording
+                                expanded = state.expanded
+                                startTime = state.startTime
+                                endTime = state.endTime
+                                startDate = state.startDate
+                                maxDuration = state.maxDuration
+                                trimEnds = state.trimEnds
+                                caption = state.caption
+
+                                setStartTime = { notify { state.startTime = it } }
+                                setEndTime = { notify { state.endTime = it } }
+                                setStartDate = { notify { state.startDate = it } }
+                                setMaxDuration = { notify { state.maxDuration = it } }
+                                setTrimEnds = { notify { state.trimEnds = it } }
+                                setExpanded = { notify(false) { state.expanded = it } }
+                                setCaption = { notify(false) { state.caption = it } }
                             }
                         }
                     }
                 }
             }
             styledDiv {
-                name = "PlayerGroup"
+                name = "Outer"
                 css {
-                    justifyContent = JustifyContent.center
-                    alignContent = Align.center
-                    padding(0.75.rem)
                     display = Display.flex
-                    flex(1.0, 0.0, 0.px)
+                    height = 100.pct
                     if (ResponsiveLayout.isPortrait) {
-                        height = ResponsiveLayout.playerHeight
-                        marginLeft = LinearDimension.auto
-                        marginRight = LinearDimension.auto
+                        flexDirection = FlexDirection.column
+                        width = 100.pct
                     } else {
-                        marginTop = 0.px
+                        flexDirection = FlexDirection.row
                     }
-
+                    alignItems = Align.start
+                    flexGrow = 1.0
+                    flexWrap = FlexWrap.nowrap
                 }
-                child(Player::class) {
-                    attrs {
-                        key = "MainPlayer"
-                        source = state.videoSource
+                styledDiv {
+                    name = "StreamGroup"
+                    css {
+                        display = Display.flex
+                        flexDirection = FlexDirection.column
+                        alignItems = Align.start
+                        flex(1.0, 0.0, 0.px)
+                        if (ResponsiveLayout.isPortrait) {
+                            width = 100.pct
+                            height = ResponsiveLayout.contentHeight
+
+                        } else {
+                            height = 100.pct
+                        }
+                        paddingBottom = 1.rem
+                    }
+                    styledDiv {
+                        name = "SelectionGroup"
+                        css {
+                            display = Display.flex
+                            width = 100.pct
+                            height = 100.pct
+                            flexDirection = FlexDirection.column
+                            alignItems = Align.start
+                            if (ResponsiveLayout.isPortrait) {
+                                borderBottomWidth = 1.px
+                                borderBottomColor = Color.gray
+
+                            } else {
+                                borderLeftWidth = 1.px
+                                borderLeftColor = Color.gray
+                            }
+                        }
+                        styledDiv {
+                            name = "CameraList"
+                            css {
+                                display = Display.flex
+                                transition("all", 300.ms)
+                                width = 100.pct
+                                maxHeight = 100.pct
+                            }
+                            child(CameraList::class) {
+                                attrs {
+                                    cameras = this@Recordings.cameras
+                                    recLists = state.recLists
+                                    toggleStream = { key ->
+                                        applyState {
+                                            if (key in selectedStreams) {
+                                                selectedStreams.remove(key)
+                                                recLists.remove(key)
+                                            } else {
+                                                selectedStreams.add(key)
+                                            }
+                                        }
+                                    }
+                                    showVideo = {
+                                        console.log("Showvideo ${it.srcUrl}")
+                                        applyState {
+                                            videoSource = it
+                                            setState { expanded = false }
+                                        }
+                                    }
+                                    selectedStreams = state.selectedStreams
+                                    maxEnd = state.maxEndDateTime
+                                    minStart = state.minStartDateTime
+                                    playingRecording = (state.videoSource as? RecordingSource)?.recording
+                                }
+                            }
+                        }
+                    }
+                }
+                styledDiv {
+                    name = "PlayerGroup"
+                    css {
+                        justifyContent = JustifyContent.center
+                        alignContent = Align.center
+                        padding(0.75.rem)
+                        display = Display.flex
+                        flex(1.0, 0.0, 0.px)
+                        if (ResponsiveLayout.isPortrait) {
+                            height = ResponsiveLayout.playerHeight
+                            marginLeft = LinearDimension.auto
+                            marginRight = LinearDimension.auto
+                        } else {
+                            marginTop = 0.px
+                        }
+
+                    }
+                    child(Player::class) {
+                        attrs {
+                            key = "MainPlayer"
+                            source = state.videoSource
+                        }
                     }
                 }
             }
@@ -322,29 +378,9 @@ class Recordings(props: Props) : RComponent<Props, RecordingsState>(props) {
     }
 
     companion object {
-        const val saveKey = "recordingsKey"
+        const val saveKey = "recordingsSaveKey"
 
         var instance: Recordings? = null
 
-        fun refreshAll() {
-            instance?.refreshList()
-        }
-
-        fun <T : Any> notify(value: T, update: Boolean = true, block: RecordingsState.(T) -> Unit) {
-            instance?.apply {
-                setState {
-                    block(value)
-                    if (update)
-                        updateRecordings()
-                }
-            }
-        }
-
-        fun onStartDate(value: Date) = notify(value) { startDate = value }
-        fun onStartTime(value: Int) = notify(value) { startTime = value }      // time of day in seconds
-        fun onEndTime(value: Int) = notify(value) { endTime = value }         // also inseconds
-        fun onMaxDuration(value: Int) = notify(value) { maxDuration = value }
-        fun onTrimEnds(value: Boolean) = notify(value) { trimEnds = value }
-        fun onCaption(value: Boolean) = notify(value, false) { caption = value }
     }
 }

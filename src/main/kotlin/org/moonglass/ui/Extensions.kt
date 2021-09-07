@@ -22,6 +22,7 @@ import kotlinx.css.rgba
 import kotlinx.css.right
 import kotlinx.css.top
 import kotlinx.css.zIndex
+import kotlinx.html.DIV
 import kotlinx.html.js.onClickFunction
 import kotlinx.serialization.decodeFromString
 import react.Props
@@ -123,7 +124,7 @@ suspend inline fun <reified T : Any> String.fetch(
 fun StyledDOMBuilder<*>.cardStyle() {
     css {
         backgroundColor = Color.white
-        borderRadius = 0.2.rem
+        borderRadius = 0.4.rem
         display = Display.flex
         margin(0.5.rem)
         padding(0.5.rem)
@@ -211,7 +212,12 @@ fun Date.after(other: Date): Boolean {
 }
 
 
-fun RBuilder.dismisser(onDismiss: () -> Unit, visible: Boolean = true, z: Int = ZIndex.Dismisser(), builder: RBuilder.() -> Unit) {
+fun RBuilder.dismisser(
+    onDismiss: () -> Unit,
+    visible: Boolean = true,
+    z: Int = ZIndex.Dismisser(),
+    builder: StyledDOMBuilder<DIV>.() -> Unit
+) {
     styledDiv {
         name = "dismisser"
         css {
@@ -222,15 +228,13 @@ fun RBuilder.dismisser(onDismiss: () -> Unit, visible: Boolean = true, z: Int = 
             right = 0.px
             backgroundColor = Color.transparent
             zIndex = z
-            if(!visible) {
+            if (!visible) {
                 display = Display.none
                 pointerEvents = PointerEvents.none
             }
         }
         attrs {
-            onClickFunction = {
-                onDismiss()
-            }
+            onClickFunction = { onDismiss() }
         }
         builder()
     }

@@ -6,15 +6,20 @@ import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.FlexWrap
 import kotlinx.css.Grow
+import kotlinx.css.Image
 import kotlinx.css.JustifyContent
 import kotlinx.css.JustifyItems
 import kotlinx.css.LinearDimension
+import kotlinx.css.Position
+import kotlinx.css.QuotedString
 import kotlinx.css.TextTransform
 import kotlinx.css.alignContent
 import kotlinx.css.alignItems
 import kotlinx.css.backgroundColor
+import kotlinx.css.backgroundImage
 import kotlinx.css.borderBottomWidth
 import kotlinx.css.borderColor
+import kotlinx.css.content
 import kotlinx.css.display
 import kotlinx.css.flex
 import kotlinx.css.flexDirection
@@ -24,16 +29,20 @@ import kotlinx.css.grow
 import kotlinx.css.height
 import kotlinx.css.justifyContent
 import kotlinx.css.justifyItems
+import kotlinx.css.margin
 import kotlinx.css.marginLeft
 import kotlinx.css.padding
 import kotlinx.css.pct
+import kotlinx.css.position
 import kotlinx.css.px
 import kotlinx.css.rem
 import kotlinx.css.textTransform
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import kotlinx.html.js.onClickFunction
+import org.moonglass.ui.api.Api
 import org.moonglass.ui.user.User
+import org.moonglass.ui.utility.Gravatar
 import react.Props
 import react.RBuilder
 import react.RComponent
@@ -46,7 +55,6 @@ import styled.styledButton
 import styled.styledDiv
 import styled.styledImg
 import styled.styledSpan
-import kotlin.reflect.KClass
 
 external interface NavBarState : State {
     var userMenuOpen: Boolean
@@ -54,7 +62,8 @@ external interface NavBarState : State {
 }
 
 external interface NavBarProps : Props {
-    var headerComponent: KClass<out RComponent<Props, *>>?
+    var api: Api
+    var renderWidget: ((RBuilder) -> Unit)?
 }
 
 
@@ -154,9 +163,7 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                     justifyItems = JustifyItems.center
                     alignItems = Align.center
                 }
-                props.headerComponent?.let {
-                    child(it) {}
-                }
+                props.renderWidget?.invoke(this)
             }
             styledDiv {
                 css {
@@ -169,29 +176,31 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                 attrs {
                     onClickFunction = { openUser() }
                 }
-                styledImg(src = "/images/chevron_down.svg") {
+                val imgSrc = props.api.session?.let { Gravatar.url(it.username) } ?: "/images/profile.svg"
+                styledImg(src = imgSrc) {
                     css {
-                        height = 2.rem
+                        before {
+                            content = QuotedString(" ")
+                            display = Display.block
+                            position = Position.absolute
+                            height = 50.px
+                            width = 50.px
+                            backgroundImage = Image("/images/profile.svg")
+                        }
+                        height = 3.rem
+                        display = Display.flex
+                        alignContent = Align.start
                         width = LinearDimension.auto
-                        display = Display.inline
-                        padding(left = 0.5.rem, right = 0.5.rem, top = 0.5.rem)
+                        padding(left = 0.5.rem, right = 0.5.rem, bottom = 0.5.rem)
                     }
                 }
-                if (!ResponsiveLayout.current.mobile)
-                    styledImg(src = "/images/profile.svg") {
-                        css {
-                            height = 2.rem
-                            width = LinearDimension.auto
-                            padding(left = 0.5.rem, right = 0.5.rem, top = 0.5.rem)
-                        }
-                    }
             }
         }
         // drop-down user menu
         if (state.userMenuOpen) {
             child(Menu::class) {
                 attrs {
-                    groups = listOf(MenuGroup("", User.menu))
+                    groups = listOf(User.group)
                     style = ContextStyle(vert = 4.0, horz = -2.0)
                     dismiss = {
                         setState({ state ->

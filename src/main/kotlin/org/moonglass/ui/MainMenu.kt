@@ -1,9 +1,7 @@
 package org.moonglass.ui
 
 import org.moonglass.ui.content.Recordings
-import org.moonglass.ui.widgets.recordings.DateTimeSelector
-import react.Props
-import react.RComponent
+import react.State
 import kotlin.reflect.KClass
 
 object MainMenu {
@@ -27,11 +25,10 @@ object MainMenu {
      * @param headerComponent An optional react component to render in the Navbar
      * @param refresher A function to refresh an already showing content component
      */
-    
+
     class MainMenuItem(
         title: String,
-        val contentComponent: KClass<out RComponent<Props, *>>? = null,
-        val headerComponent: KClass<out RComponent<Props, *>>? = null,
+        val contentComponent: KClass<out Content<in ContentProps, out State>>? = null,
         val refresher: (() -> Unit)? = null
     ) :
         MenuItemTemplate(
@@ -46,7 +43,7 @@ object MainMenu {
         MenuGroup(
             "Video",
             listOf(
-                MainMenuItem("Recordings", Recordings::class, DateTimeSelector::class, { Recordings.refreshAll()}),
+                MainMenuItem("Recordings", Recordings::class) { App.refreshAll() },
                 MainMenuItem("Live view"),
             )
         ),

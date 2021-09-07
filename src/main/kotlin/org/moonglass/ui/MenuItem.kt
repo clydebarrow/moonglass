@@ -108,7 +108,7 @@ fun MenuItemProps.copyFrom(template: MenuItemTemplate) {
 open class MenuItemTemplate(
     val menuId: String,
     val title: String,
-    val enabled: Boolean,
+    open val enabled: Boolean,
     val image: String,
     val action: (String) -> Unit
 )

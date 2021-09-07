@@ -24,20 +24,17 @@ import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
 import io.ktor.client.request.url
 import io.ktor.client.statement.HttpResponse
-import io.ktor.http.URLProtocol
 import io.ktor.http.Url
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.WebSocketSession
-import io.ktor.http.isSecure
-import io.ktor.http.takeFrom
 import io.ktor.utils.io.core.readBytes
-import kotlinx.browser.window
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.khronos.webgl.Uint8Array
 import org.moonglass.ui.Duration90k
 import org.moonglass.ui.Time90k
+import org.moonglass.ui.api.setDefaults
 import org.moonglass.ui.widgets.Toast
 import org.w3c.dom.mediasource.AppendMode
 import org.w3c.dom.mediasource.MediaSource
@@ -88,11 +85,6 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
     override val srcUrl: String = URL.createObjectURL(mediaSource)
 
     private var callback: ((Double) -> Unit)? = null
-    override fun setAspectCallback(callback: (Double) -> Unit) {
-        this.callback = callback
-        if (aspectRatio != 0.0)
-            callback(aspectRatio)
-    }
 
     private lateinit var srcBuffer: SourceBuffer
 
@@ -123,13 +115,9 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
     private suspend fun getInitializationSegment(id: Int): ByteArray {
         val url = HttpRequestBuilder().apply {
             url {
-                takeFrom(wsUrl)
-                protocol = if (wsUrl.protocol.isSecure()) URLProtocol.HTTPS else URLProtocol.HTTP
-                path("api", "init", "$id.mp4")
+                setDefaults("init", "$id.mp4")
             }
         }
-        console.log("window.location = ${window.location}, protocol=${window.location.protocol}")
-        console.log("url = ${url.build()}")
         val response: HttpResponse = client.get(url)
         // if there is an X-Aspect header, parse it in the form 16:9, convert this to 16/9
         response.headers["X-Aspect"]?.let { headerText ->
