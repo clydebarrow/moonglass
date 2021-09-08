@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2021. Clyde Stubbs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.moonglass.ui.content
 
 import kotlinx.browser.window
@@ -154,6 +170,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
     }
 
     override fun componentWillUnmount() {
+        state.videoSource?.close()
         saveMyStuff()
         instance = null
         SavedState.save(
@@ -198,10 +215,14 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
         updateRecordings()
     }
 
+    /**
+     * Update the recordings for each selected (i.e. expanded) stream.
+     */
     private fun updateRecordings() {
+        // filter out unselected streams, and those for which we already have a set of recordings.
         val needy = cameras.values.flatten().filter { it.key in state.selectedStreams && it.key !in state.recLists }
         if (needy.isNotEmpty()) {
-            // prevent repeating the fetch below.
+            // insert an empty list to prevent repeating the fetch below if render is called again before we finish.
             needy.forEach { state.recLists[it.key] = RecList() }
             MainScope().launch {
                 val updates = needy.map { cameraStream ->
@@ -209,7 +230,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                         cameraStream,
                         state.startDateTime,
                         state.endDateTime,
-                        Duration.hours(state.maxDuration).as90k
+                        Duration.hours(state.maxDuration)
                     )?.let { data ->
                         console.log("Fetched ${data.recordings.size} recordings for $cameraStream")
                         Pair(cameraStream.key, data)
@@ -334,8 +355,9 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                                         }
                                     }
                                     showVideo = {
-                                        console.log("Showvideo ${it.srcUrl}")
+                                        console.log("Showvideo ${it.caption}/${it.srcUrl}")
                                         applyState {
+                                            videoSource?.close()
                                             videoSource = it
                                             setState { expanded = false }
                                         }

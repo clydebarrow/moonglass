@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2021. Clyde Stubbs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.moonglass.ui.widgets.recordings
 
 import kotlinx.css.Align
@@ -23,6 +39,8 @@ import kotlinx.css.flexGrow
 import kotlinx.css.flexWrap
 import kotlinx.css.fontWeight
 import kotlinx.css.justifyContent
+import kotlinx.css.marginLeft
+import kotlinx.css.marginRight
 import kotlinx.css.opacity
 import kotlinx.css.overflowY
 import kotlinx.css.padding
@@ -65,32 +83,23 @@ import styled.styledDiv
 import styled.styledImg
 import kotlin.math.roundToInt
 
-
-external interface CameraListState : State
-
-external interface CameraListProps : Props {
-    var cameras: Map<Api.Camera, List<Stream>>
-    var recLists: Map<String, RecList>
-    var selectedStreams: Set<String>
-    var minStart: Time90k
-    var maxEnd: Time90k
-    var playingRecording: RecList.Recording?
-
-    // callbacks
-    var toggleStream: (String) -> Unit
-    var showVideo: (VideoSource) -> Unit
-}
+/**
+ * Present a list of cameras and their streams, expandable to show recordings for each stream.
+ */
 
 class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraListState>(props) {
 
-
+    /**
+     * Build the header line for a camera
+     */
     private fun StyledDOMBuilder<DIV>.cameraHeader(camera: Api.Camera) {
         styledDiv {
             name = "cameraHeader"
             css {
                 display = Display.flex
                 flexDirection = FlexDirection.row
-                backgroundColor = Color.lightBlue
+                justifyContent = JustifyContent.spaceBetween
+                backgroundColor = cameraColor
             }
             styledDiv {
                 css {
@@ -116,8 +125,10 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
         }
     }
 
+    // get the reclist for a given stream (by key)
     private val Stream.recList get() = props.recLists[key] ?: RecList()
 
+    // construct a line describing a stream.
     private fun StyledDOMBuilder<DIV>.streamHeader(stream: Stream) {
         val isSelected = stream.key in props.selectedStreams
         val recordings = stream.recList.recordings
@@ -129,7 +140,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
             css {
                 display = Display.flex
                 flexDirection = FlexDirection.row
-                backgroundColor = Color.lightBlue.lighten(20)
+                backgroundColor = streamColor
                 alignContent = Align.center
                 padding(left = 1.rem, right = 6.px)
                 color = Color.black
@@ -145,19 +156,14 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                 +stream.name
             }
             styledDiv {
+                val hours = "${stream.metaData.totalDuration90k.toDuration.inWholeHours} hours"
                 css {
                     display = Display.flex
                     flex(1.0, 0.0, 0.px)
                     padding(left = 0.5.rem, right = 0.5.rem)
+                    marginRight = LinearDimension.auto
                 }
-                +"${stream.metaData.days.size} days"
-            }
-            styledDiv {
-                css {
-                    flex(1.0, 0.0, 0.px)
-                    padding(left = 0.5.rem, right = 0.5.rem)
-                }
-                +"${stream.metaData.totalDuration90k.toDuration.inWholeHours} hours"
+                +"$hours over ${stream.metaData.days.size} days"
             }
             styledImg(src = "/images/liveView.svg") {
                 attrs {
@@ -257,4 +263,25 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
             }
         }
     }
+
+    companion object {
+        val cameraColor = Color.lightBlue
+        val streamColor = cameraColor.lighten(20)
+    }
 }
+
+external interface CameraListState : State
+
+external interface CameraListProps : Props {
+    var cameras: Map<Api.Camera, List<Stream>>
+    var recLists: Map<String, RecList>
+    var selectedStreams: Set<String>
+    var minStart: Time90k
+    var maxEnd: Time90k
+    var playingRecording: RecList.Recording?
+
+    // callbacks
+    var toggleStream: (String) -> Unit
+    var showVideo: (VideoSource) -> Unit
+}
+

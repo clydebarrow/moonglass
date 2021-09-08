@@ -18,6 +18,8 @@ package org.moonglass.ui.video
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.js.Js
+import io.ktor.client.features.HttpTimeout
+import io.ktor.client.features.timeout
 import io.ktor.client.features.websocket.WebSockets
 import io.ktor.client.features.websocket.webSocket
 import io.ktor.client.request.HttpRequestBuilder
@@ -29,12 +31,11 @@ import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.WebSocketSession
 import io.ktor.utils.io.core.readBytes
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.khronos.webgl.Uint8Array
 import org.moonglass.ui.Duration90k
 import org.moonglass.ui.Time90k
-import org.moonglass.ui.api.setDefaults
+import org.moonglass.ui.api.apiConfig
 import org.moonglass.ui.widgets.Toast
 import org.w3c.dom.mediasource.AppendMode
 import org.w3c.dom.mediasource.MediaSource
@@ -69,14 +70,15 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
     private val mediaSource = MediaSource().apply {
         // attach event listeners
         onsourceended = {
-            console.log("MediaSource ended: $it")
-            close()
+            console.log("MediaSource ended: ${it.type}")
         }
         onsourceclose = {
-            console.log("MediaSource closed: $it")
-            close()
+            console.log("MediaSource closed: ${it.type}")
         }
-        onsourceopen = { start() }
+        onsourceopen = {
+            console.log("MediaSource opened")
+            start()
+        }
     }
 
     /**
@@ -106,6 +108,7 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
 
     private val client = HttpClient(Js) {
         install(WebSockets) { }
+        install(HttpTimeout)
     }
 
     /**
@@ -114,8 +117,9 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
 
     private suspend fun getInitializationSegment(id: Int): ByteArray {
         val url = HttpRequestBuilder().apply {
+            timeout { requestTimeoutMillis = 10000 }
             url {
-                setDefaults("init", "$id.mp4")
+                apiConfig("init", "$id.mp4")
             }
         }
         val response: HttpResponse = client.get(url)
@@ -159,10 +163,10 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
         srcBuffer = mediaSource.addSourceBuffer(data.contentType)
         srcBuffer.mode = AppendMode.SEGMENTS
         srcBuffer.onerror = {
-            console.log("Mediasource error: $it")
+            console.log("Mediasource error: ${it.type}")
         }
         srcBuffer.onabort = {
-            console.log("Mediasource abort: $it")
+            console.log("Mediasource abort: ${it.type}")
         }
         srcBuffer.onupdateend = {
             transfer()
@@ -194,8 +198,10 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
                     }
                 } catch (ex: Exception) {
                     console.log("$ex")
+                } finally {
+                    console.log("Ended websocket for $srcUrl, mediaSource.state = ${mediaSource.readyState}")
+                    bufferQueue.clear()
                 }
-                close()
             }
         }
     }
@@ -204,16 +210,15 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
     /**
      * End the streaming.
      */
-    fun close() {
+    override fun close() {
         try {
-            client.close()
-            scope.cancel()
             console.log("Closing LiveSource, mediaState = ${mediaSource.readyState}")
-            if (mediaSource.readyState == ReadyState.OPEN)
+            if (mediaSource.readyState == ReadyState.OPEN) {
+                mediaSource.removeSourceBuffer(srcBuffer)
                 mediaSource.endOfStream()
-            bufferQueue.clear()
+            }
         } catch (ex: Exception) {
-            console.log("Exception in close: $ex")
+            console.log("Exception in close: ${ex.message}")
         }
     }
 

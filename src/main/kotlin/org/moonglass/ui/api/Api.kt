@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2021. Clyde Stubbs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.moonglass.ui.api
 
 import io.ktor.client.HttpClient
@@ -15,11 +31,11 @@ import io.ktor.http.contentType
 import kotlinx.browser.window
 import kotlinx.serialization.Serializable
 import org.moonglass.ui.App
-import org.moonglass.ui.Duration90k
 import org.moonglass.ui.as90k
 import org.moonglass.ui.widgets.Toast
 import org.moonglass.ui.widgets.recordings.Stream
 import kotlin.js.Date
+import kotlin.time.Duration
 
 @Serializable
 data class Api(
@@ -94,7 +110,7 @@ data class Api(
             return apiCall {
                 get {
                     url {
-                        setDefaults()
+                        apiConfig()
                         path("api", "")
                         parameter("days", "true")
                     }
@@ -114,7 +130,7 @@ data class Api(
                     post<HttpResponse> {
                         contentType(ContentType.Application.Json)
                         url {
-                            setDefaults()
+                            apiConfig()
                             path("api", "login")
                         }
                         body = LoginData(username, password)
@@ -132,7 +148,7 @@ data class Api(
                 post<HttpResponse> {
                     contentType(ContentType.Application.Json)
                     url {
-                        setDefaults()
+                        apiConfig()
                         path("api/logout")
                         body = mapOf("csrf" to csrf)
                     }
@@ -143,29 +159,37 @@ data class Api(
         }
 
 
-        // /api/cameras/7f2e2a50-1e68-4647-817b-03089ca2003e/sub/recordings?startTime90k=146706552000000&endTime90k=146714328000000&split90k=324000000
+        /**
+         * Fetch a recording set for a given stream.
+         *
+         * @param stream The stream in question.
+         * @param startTime Only fetch recordings after this time
+         * @param endTime The upper time limit
+         * @param maxDuration Split the recordings into chunks of this size.
+         * @return A RecList or null if something went wrong.
+         */
         suspend fun fetchRecording(
             stream: Stream,
             startTime: Date,
             endTime: Date,
-            maxDuration: Duration90k
+            maxDuration: Duration
         ): RecList? {
             return apiCall {
                 get {
                     url {
-                        setDefaults()
+                        apiConfig()
                         path("api", "cameras", stream.camera.uuid, stream.name, "recordings")
                     }
                     parameter("startTime90k", startTime.as90k)
                     parameter("endTime90k", endTime.as90k)
-                    parameter("split90k", maxDuration)
+                    parameter("split90k", maxDuration.as90k)
                 }
             }
         }
     }
 }
 
-fun URLBuilder.setDefaults(vararg pathSegments: String, websocket: Boolean = false) {
+fun URLBuilder.apiConfig(vararg pathSegments: String, websocket: Boolean = false) {
     window.location.also { location ->
         protocol = if (location.protocol.endsWith('s')) {
             if (websocket) URLProtocol.WSS else URLProtocol.HTTPS

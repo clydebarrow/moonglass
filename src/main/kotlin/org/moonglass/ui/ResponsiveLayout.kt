@@ -1,10 +1,26 @@
+/*
+ * Copyright (c) 2021. Clyde Stubbs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.moonglass.ui
 
-import kotlinx.browser.document
 import kotlinx.browser.window
 import kotlinx.css.LinearDimension
 import kotlinx.css.rem
 import kotlinx.css.vh
+import kotlinx.css.vw
 
 
 object ResponsiveLayout {
@@ -20,7 +36,7 @@ object ResponsiveLayout {
     const val portraitAspect = 1.5
 
     // show the side menu if the aspect ration is greathr than this
-    const val showMenuAspect = 1.9
+    val showMenuAspect get() = if (isPortrait) 1.0 else 1.8
 
     val aspectRatio get() = (window.innerWidth.toDouble() / window.innerHeight)
 
@@ -38,18 +54,26 @@ object ResponsiveLayout {
     /** The height of the navbar
      *
      */
-    val navBarEmHeight = 4        // height in ems
-    val sideBarEmWidth = 12
+    val navBarEmHeight = 4.rem        // height in ems
+    val sideBarEmWidth = 12.rem
 
-    val outerHeight get() = 100.vh - navBarEmHeight.rem
+    val sideBarActualWidth get() = if (showSideMenu) sideBarEmWidth else 0.rem
+
+    val outerHeight get() = 100.vh - navBarEmHeight
 
     val contentHeight: LinearDimension
         get() {
             return if (isPortrait)
-                (100.vh  - navBarEmHeight.rem) / 2
+                (100.vh - navBarEmHeight) / 2
             else
-                100.vh - navBarEmHeight.rem
+                100.vh - navBarEmHeight
         }
+
+    val contentWidth
+        get() = if (isPortrait)
+            100.vw - sideBarEmWidth
+        else
+            (100.vw - sideBarEmWidth) / 2
 
     val playerHeight get() = contentHeight     // make them the same for now
 }
