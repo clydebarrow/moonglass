@@ -29,6 +29,7 @@ import kotlinx.css.borderColor
 import kotlinx.css.borderRadius
 import kotlinx.css.borderWidth
 import kotlinx.css.bottom
+import kotlinx.css.color
 import kotlinx.css.display
 import kotlinx.css.fontSize
 import kotlinx.css.height
@@ -39,12 +40,14 @@ import kotlinx.css.opacity
 import kotlinx.css.padding
 import kotlinx.css.pct
 import kotlinx.css.position
+import kotlinx.css.properties.boxShadow
 import kotlinx.css.properties.ms
 import kotlinx.css.properties.transform
 import kotlinx.css.properties.transition
 import kotlinx.css.properties.translate
 import kotlinx.css.px
 import kotlinx.css.rem
+import kotlinx.css.rgba
 import kotlinx.css.textAlign
 import kotlinx.css.vh
 import kotlinx.css.zIndex
@@ -115,7 +118,6 @@ class Toast : RComponent<Props, ToastState>() {
     }
 
     override fun componentDidMount() {
-        console.log("Toast: ComponentDidMount")
         instance = this@Toast
     }
 
@@ -141,13 +143,15 @@ class Toast : RComponent<Props, ToastState>() {
                 left = 50.pct
                 transform { translate(-50.pct, 0.pct) }
                 bottom = 20.vh
-                backgroundColor = Color.gray
+                backgroundColor = Color.black
+                color = Color.white
                 borderWidth = 1.px
-                borderColor = Color.darkBlue
+                borderColor = Color.darkGray
                 borderRadius = 10.px
+                boxShadow(rgba(0, 0, 0, 0.1), 0.px, 8.px, 15.px)
                 padding(10.px)
                 justifyContent = JustifyContent.center
-                maxWidth = 400.px
+                maxWidth = 500.px
                 fontSize = 1.2.rem
                 transition("all", fadeoutDuration.ms)
                 opacity = when (state.displayState) {

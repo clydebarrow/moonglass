@@ -199,8 +199,8 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                             content = QuotedString(" ")
                             display = Display.block
                             position = Position.absolute
-                            height = 50.px
-                            width = 50.px
+                            height = 3.rem
+                            width = 3.rem
                             backgroundImage = Image("/images/profile.svg")
                         }
                         height = 3.rem

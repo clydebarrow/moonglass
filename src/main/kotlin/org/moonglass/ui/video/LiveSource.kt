@@ -29,6 +29,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.Url
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.WebSocketSession
+import io.ktor.http.cio.websocket.close
 import io.ktor.utils.io.core.readBytes
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -56,18 +57,9 @@ import kotlin.collections.set
 class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSource {
 
     /**
-     * the aspect ratio of the received video. Updated once the stream starts
-     */
-    var aspectRatio: Double = 0.0
-        set(value) {
-            field = value
-            callback?.invoke(value)
-        }
-
-    /**
      * The mediasource that buffers the stream
      */
-    private val mediaSource = MediaSource().apply {
+    private val mediaSource: MediaSource = MediaSource().apply {
         // attach event listeners
         onsourceended = {
             console.log("MediaSource ended: ${it.type}")
@@ -77,7 +69,6 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
         }
         onsourceopen = {
             console.log("MediaSource opened")
-            start()
         }
     }
 
@@ -86,9 +77,9 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
      */
     override val srcUrl: String = URL.createObjectURL(mediaSource)
 
-    private var callback: ((Double) -> Unit)? = null
-
     private lateinit var srcBuffer: SourceBuffer
+
+    private var isPaused = false
 
     /**
      * The coroutine scope used to run tasks.
@@ -122,31 +113,42 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
                 apiConfig("init", "$id.mp4")
             }
         }
-        val response: HttpResponse = client.get(url)
-        // if there is an X-Aspect header, parse it in the form 16:9, convert this to 16/9
-        response.headers["X-Aspect"]?.let { headerText ->
-            headerText.split(':').map { it.toIntOrNull() }.let {
-                it[0]?.toDouble()?.div(it[1]?.toDouble() ?: 1.0)
-            }
-        }?.let { aspectRatio = it }
-        return response.content.readRemaining(100000, 0).readBytes()
+        return client.get<HttpResponse>(url).content.readRemaining(100000, 0).readBytes()
+    }
+
+    val SourceBuffer.timeRange: Pair<Double, Double>
+        get() {
+            val ranges = buffered
+            val length = ranges.length
+            val rangeEnd = if (length == 0) 0.0 else ranges.end(length - 1)
+            val rangeStart = if (length == 0) 0.0 else ranges.start(0)
+            return Pair(rangeStart, rangeEnd)
+        }
+
+    /**
+     * If a sourcebuffer exceeds the given value, trim it to somewhat less
+     */
+    fun SourceBuffer.trimTo(seconds: Int): Boolean {
+        val range = timeRange
+        if (range.second - range.first > seconds) {
+            console.log("time range ${range.first}-${range.second}, removing some")
+            remove(range.first, range.first + (seconds * 1.5).coerceAtMost(range.second))
+            return true
+        }
+        return false
     }
 
     // called to transfer data into the SourceBuffer
     private fun transfer() {
         if (!srcBuffer.updating) {
-            val ranges = srcBuffer.buffered
-            val length = ranges.length
-            val rangeEnd = if (length == 0) 0.0 else ranges.end(length - 1)
-            val rangeStart = if (length == 0) 0.0 else ranges.start(0)
-            // remove data from buffer if more than 5 minutes buffered. Allow some hysteresis.
-            if (rangeEnd - rangeStart > MAX_TIME * 1.5) {
-                console.log("time range $rangeStart-$rangeEnd, removing some")
-                srcBuffer.remove(rangeStart, rangeStart + MAX_TIME)
-            } else  // append a new buffer if we have one
+            if (!srcBuffer.trimTo(MAX_TIME))
                 bufferQueue.removeFirstOrNull()?.let { data ->
-                    srcBuffer.timestampOffset = rangeEnd
-                    mediaSource.setLiveSeekableRange((rangeEnd - MAX_TIME - 60).coerceAtLeast(rangeEnd), rangeEnd)
+                    val range = srcBuffer.timeRange
+                    srcBuffer.timestampOffset = range.second
+                    mediaSource.setLiveSeekableRange(
+                        (range.second - MAX_TIME - 60).coerceAtLeast(range.first),
+                        range.second
+                    )
                     srcBuffer.appendBuffer(data.data)
                 }
         }
@@ -160,16 +162,18 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
             Toast.toast("Media type ${data.contentType} not supported")
             throw IllegalArgumentException("Media type not supported")
         }
-        srcBuffer = mediaSource.addSourceBuffer(data.contentType)
-        srcBuffer.mode = AppendMode.SEGMENTS
-        srcBuffer.onerror = {
-            console.log("Mediasource error: ${it.type}")
-        }
-        srcBuffer.onabort = {
-            console.log("Mediasource abort: ${it.type}")
-        }
-        srcBuffer.onupdateend = {
-            transfer()
+        if (!::srcBuffer.isInitialized) {
+            srcBuffer = mediaSource.addSourceBuffer(data.contentType)
+            srcBuffer.mode = AppendMode.SEGMENTS
+            srcBuffer.onerror = {
+                console.log("Mediasource error: ${it.type}")
+            }
+            srcBuffer.onabort = {
+                console.log("Mediasource abort: ${it.type}")
+            }
+            srcBuffer.onupdateend = {
+                transfer()
+            }
         }
         bufferQueue.add(data)
         srcBuffer.appendBuffer(getInitializationSegment(data.sampleId))     // starts the transfer callbacks
@@ -179,6 +183,7 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
      * open the websocket and start streaming data
      */
     private fun start() {
+        isPaused = false
         scope.launch {
             client.webSocket({
                 url {
@@ -187,7 +192,7 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
             }) {
                 try {
                     setup()
-                    while (mediaSource.readyState == ReadyState.OPEN) {
+                    while (!isPaused && mediaSource.readyState == ReadyState.OPEN) {
                         val message = incoming.receive() as Frame.Binary
                         val data = ByteBuffer(message.data).parseBuffer()
                         if (bufferQueue.size < MAX_BUFFER) {
@@ -199,13 +204,25 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
                 } catch (ex: Exception) {
                     console.log("$ex")
                 } finally {
+                    this.close()
                     console.log("Ended websocket for $srcUrl, mediaSource.state = ${mediaSource.readyState}")
                     bufferQueue.clear()
+                    srcBuffer.trimTo(0)
                 }
             }
         }
     }
 
+
+    override fun pause() {
+        console.log("Mediasource paused")
+        isPaused = true
+    }
+
+    override fun play() {
+        console.log("Mediasource onPlay")
+        start()
+    }
 
     /**
      * End the streaming.

@@ -25,6 +25,7 @@ import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.URLBuilder
 import io.ktor.http.URLProtocol
 import io.ktor.http.contentType
@@ -32,6 +33,7 @@ import kotlinx.browser.window
 import kotlinx.serialization.Serializable
 import org.moonglass.ui.App
 import org.moonglass.ui.as90k
+import org.moonglass.ui.user.User
 import org.moonglass.ui.widgets.Toast
 import org.moonglass.ui.widgets.recordings.Stream
 import kotlin.js.Date
@@ -107,14 +109,21 @@ data class Api(
         }
 
         suspend fun fetchApi(): Api? {
-            return apiCall {
-                get {
-                    url {
-                        apiConfig()
-                        path("api", "")
-                        parameter("days", "true")
+            return try {
+                apiCall(true) {
+                    get {
+                        url {
+                            apiConfig("")
+                            parameter("days", "true")
+                        }
                     }
                 }
+            } catch (ex: ClientRequestException) {
+                if (ex.response.status == HttpStatusCode.Unauthorized)
+                    User.showLoginDialog()
+                else
+                    Toast.toast(ex.message.substringAfterLast("Text:"))
+                null
             }
         }
 
@@ -154,7 +163,7 @@ data class Api(
                     }
                 }
                 Toast.toast("Logged out")
-                App.session = null
+                App.clearApiData()
             }
         }
 
@@ -196,7 +205,7 @@ fun URLBuilder.apiConfig(vararg pathSegments: String, websocket: Boolean = false
         } else {
             if (websocket) URLProtocol.WS else URLProtocol.HTTP
         }
-        host = location.host
+        host = location.hostname
         location.port.toIntOrNull()?.let { port = it }
         path("api", *pathSegments)
     }

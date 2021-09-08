@@ -42,7 +42,6 @@ class Timer {
         handle?.let { window.clearTimeout(it) }
         handle = window.setTimeout({
             handle = null
-            console.log("timer completed")
             handler(this)
         }, delayMs.coerceAtLeast(1))
     }

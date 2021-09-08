@@ -29,17 +29,13 @@ import kotlinx.css.height
 import kotlinx.css.pct
 import kotlinx.css.width
 import org.moonglass.ui.api.Api
-import org.moonglass.ui.api.RecList
-import org.moonglass.ui.user.User
 import org.moonglass.ui.widgets.Dialog
 import org.moonglass.ui.widgets.Spinner
 import org.moonglass.ui.widgets.Toast
-import org.moonglass.ui.widgets.recordings.Stream
 import react.Props
 import react.RBuilder
 import react.RComponent
 import react.State
-import react.createContext
 import react.setState
 import styled.css
 import styled.styledDiv
@@ -77,7 +73,7 @@ class App() : RComponent<Props, AppState>() {
                 applyState {
                     api = list
                 }
-            } ?: User.showLoginDialog()
+            }
         }
     }
 
@@ -124,17 +120,18 @@ class App() : RComponent<Props, AppState>() {
 
         // get the current camera list
 
-        var session: Api.Session?
+        val session: Api.Session?
             get() = instance?.state?.api?.session
-            set(value) {
-                instance?.state?.api?.let {
-                    session = value
-                }
-            }
 
 
         fun refreshAll() {
             instance?.refreshList()
+        }
+
+        fun clearApiData() {
+            instance?.apply {
+                setState { api = Api() }
+            }
         }
 
         val selectedItemId: String? get() = instance?.state?.contentShowing?.menuId
@@ -171,7 +168,6 @@ class App() : RComponent<Props, AppState>() {
          */
         fun setRefresh(key: String, active: Boolean) {
             instance?.setState {
-                console.log("Refreshing $key: $active")
                 if (active)
                     refreshing.add(key)
                 else

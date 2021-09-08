@@ -44,7 +44,7 @@ external interface ModalProps : Props {
 /**
  * Show a component as a modal dialog, centered on a translucent dismisser.
  */
-abstract class Modal<P : ModalProps, S : State> : RComponent<P, S>() {
+abstract class Modal<S : State>(props: ModalProps) : RComponent<ModalProps, S>(props) {
 
     open val dismissOutside: Boolean = true
 
@@ -73,4 +73,6 @@ abstract class Modal<P : ModalProps, S : State> : RComponent<P, S>() {
             }
         }
     }
+
+    fun dismiss() = props.doDismiss()
 }

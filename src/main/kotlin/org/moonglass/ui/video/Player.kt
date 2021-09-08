@@ -37,6 +37,8 @@ import react.RBuilder
 import react.RComponent
 import react.State
 import react.dom.attrs
+import react.dom.onPause
+import react.dom.onPlay
 import styled.css
 import styled.styledDiv
 import styled.styledVideo
@@ -89,11 +91,11 @@ class Player(props: PlayerProps) : RComponent<PlayerProps, PlayerState>(props) {
                     autoPlay = true
                     autoBuffer = true
                     controls = true
-                    props.source.also {
-                        if (it != null)
-                            src = it.srcUrl
-                        else
-                            poster = "/images/placeholder.jpg"
+                    poster = "/images/placeholder.jpg"
+                    props.source?.also { videoSource ->
+                        src = videoSource.srcUrl
+                        onPlay = { videoSource.play() }
+                        onPause = { videoSource.pause() }
                     }
                 }
             }

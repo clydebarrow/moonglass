@@ -19,5 +19,7 @@ package org.moonglass.ui.video
 interface VideoSource {
     val srcUrl: String
     val caption: String
-    fun close()
+    fun close() = Unit
+    fun pause() = Unit
+    fun play() = Unit
 }

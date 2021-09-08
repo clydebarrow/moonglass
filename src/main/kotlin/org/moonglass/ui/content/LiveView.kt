@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-package org.moonglass.ui.video
+package org.moonglass.ui.content
 
-import org.moonglass.ui.api.RecList
-import org.moonglass.ui.api.getEndTime
-import org.moonglass.ui.api.getStartDate
-import org.moonglass.ui.api.getStartTime
-import org.moonglass.ui.widgets.recordings.Stream
+import org.moonglass.ui.Content
+import org.moonglass.ui.ContentProps
+import react.RBuilder
+import react.State
 
-class RecordingSource(stream: Stream, val recording: RecList.Recording) : VideoSource {
 
-    override val caption = "$stream ${recording.getStartDate()} ${recording.getStartTime()}-${recording.getEndTime()}"
-    override val srcUrl: String = stream.url(recording, false)
-
+class LiveView(props: ContentProps): Content<ContentProps, LiveViewState>(props) {
+    override fun RBuilder.render() {
+        TODO("Not yet implemented")
+    }
 }
+
+external interface LiveViewState: State

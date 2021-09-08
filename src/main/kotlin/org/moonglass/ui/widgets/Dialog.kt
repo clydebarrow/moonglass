@@ -53,18 +53,20 @@ import kotlinx.html.DIV
 import kotlinx.html.InputType
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
+import kotlinx.serialization.Serializable
 import org.moonglass.ui.Modal
 import org.moonglass.ui.ModalProps
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.cardStyle
 import org.moonglass.ui.name
+import org.moonglass.ui.utility.SavedState
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.events.Event
 import react.State
 import react.dom.KeyboardEvent
 import react.dom.attrs
 import react.dom.defaultValue
-import react.dom.onKeyDown
+import react.dom.onKeyPress
 import react.setState
 import styled.StyledDOMBuilder
 import styled.css
@@ -73,15 +75,8 @@ import styled.styledDiv
 import styled.styledForm
 import styled.styledInput
 
-external interface DialogState : State {
-    var isValid: Boolean
-}
 
-abstract class Dialog : Modal<ModalProps, DialogState>() {
-
-    /**
-     * Input types.
-     */
+abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
 
     /**
      * An entry in the dialog.
@@ -97,7 +92,6 @@ abstract class Dialog : Modal<ModalProps, DialogState>() {
         props.doDismiss()
     }
 
-    open fun onDismiss() = props.doDismiss()
     open fun validate() = true
 
     open val okText = "OK"
@@ -105,9 +99,23 @@ abstract class Dialog : Modal<ModalProps, DialogState>() {
 
     abstract val items: List<Entry>
 
-    protected val inputData by lazy {
-        items.associate { it.key to it.defaultValue }.toMutableMap()
+    val saveKey get() = "Dialog-$title"
+
+    val inputData by lazy {
+        items.associate { it.key to it.defaultValue }.toMutableMap().also { data ->
+            try {
+                SavedState.restore<SavedData>(saveKey)?.let { savedData ->
+                    console.log("Restored data $savedData")
+                    data.filter { it.value.isBlank() }.map { it.key }.forEach { key ->
+                        savedData.data[key]?.let { data[key] = it }
+                    }
+                }
+            } catch (ex: Exception) {
+                console.log(ex.toString())
+            }
+        }
     }
+
 
     var Entry.value: String
         get() = inputData[key] ?: ""
@@ -116,7 +124,13 @@ abstract class Dialog : Modal<ModalProps, DialogState>() {
         }
 
     override fun DialogState.init(props: ModalProps) {
-        isValid = validate()
+        console.log("Dialog init")
+        // restore any previously entered data that does not have a default value
+    }
+
+    override fun componentWillUnmount() {
+        console.log("Saving data $inputData")
+        SavedState.save(saveKey, cleanData())
     }
 
     private fun Entry.onValueChange(event: Event) {
@@ -129,14 +143,15 @@ abstract class Dialog : Modal<ModalProps, DialogState>() {
 
     private fun keyDown(event: KeyboardEvent<*>) {
         event.apply {
-            preventDefault()
-            stopPropagation()
             when (key) {
                 "Escape" -> props.doDismiss()
                 "Enter" -> {
                     if (validate()) onSubmit()
                 }
+                else -> return
             }
+            event.stopPropagation()
+            event.preventDefault()
         }
     }
 
@@ -144,7 +159,7 @@ abstract class Dialog : Modal<ModalProps, DialogState>() {
         // use a form so we can legally enclose input fields
         styledForm {
             attrs {
-                //onKeyDown = ::keyDown
+                onKeyPress = ::keyDown
             }
             cardStyle()
             css {
@@ -205,7 +220,7 @@ abstract class Dialog : Modal<ModalProps, DialogState>() {
                             margin(bottom = 0.2.rem, right = 0.5.rem)
                         }
                         attrs {
-                            defaultValue = item.defaultValue
+                            defaultValue = item.value
                             onChangeFunction = { item.onValueChange(it) }
                         }
                     }
@@ -220,7 +235,7 @@ abstract class Dialog : Modal<ModalProps, DialogState>() {
                 }
                 // cancel button
                 if (cancelText.isNotBlank()) {
-                    button(cancelText) { onDismiss() }
+                    button(cancelText) { dismiss() }
                 }
                 button(okText, state.isValid) { onSubmit() }
             }
@@ -261,10 +276,26 @@ abstract class Dialog : Modal<ModalProps, DialogState>() {
         }
     }
 
+    private fun cleanData(): SavedData {
+        val passwords = items.filter { it.type != InputType.password }.map { it.key }.toSet()
+        return SavedData(inputData.filterKeys { (it in passwords) })
+    }
+
     companion object {
         val buttonBackground = Color("#e0e0ff")
         val cancelButtonBackground = Color("#ffe0e0")
         val disabledBackground = Color("#f0f0f0")
         val headerBackground = Color("#f0f0f0")
     }
+
+    @Serializable
+    private data class SavedData(val data: Map<String, String>) {
+        companion object {
+        }
+    }
+
+}
+
+external interface DialogState : State {
+    var isValid: Boolean
 }

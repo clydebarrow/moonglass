@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import org.jetbrains.kotlin.konan.target.HostManager.Companion.host
-import java.io.File
 import java.util.Properties
 
 plugins {
@@ -47,25 +45,19 @@ open class PropertiesFile(private val file: File) {
 val localProperties get() = PropertiesFile(File("local.properties"))
 
 // defaults to true
-val shouldOpen: Boolean = localProperties["openBrowser"] != "false"
-
-val nvrHost: String? = localProperties["nvrHost"]
-
-// set up deployment if configured.
-
-val deployTarget: String? = localProperties["deployTarget"]
 
 kotlin {
     js(IR) {
+        binaries.executable()
         browser {
             commonWebpackConfig {
                 cssSupport.enabled = true
                 devServer?.apply {
-                    open = shouldOpen
-                    if (nvrHost != null) {
+                    open = localProperties["openBrowser"] != "false"
+                    localProperties["nvrHost"]?.also {
                         proxy = mutableMapOf(
                             "/api" to mapOf(
-                                "target" to nvrHost,
+                                "target" to it,
                                 "ws" to true
                             )
                         )
@@ -73,11 +65,10 @@ kotlin {
                 }
             }
         }
-        binaries.executable()
     }
 }
 
-val ktor_version = "1.6.3"
+val ktorVersion = "1.6.3"
 
 dependencies {
 
@@ -85,12 +76,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-js:1.2.2")
     implementation("org.jetbrains.kotlin-wrappers:kotlin-react:17.0.2-pre.236-kotlin-1.5.30")
     implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:17.0.2-pre.236-kotlin-1.5.30")
-    implementation("io.ktor:ktor-client-js:$ktor_version")
-    implementation("io.ktor:ktor-client-websockets:$ktor_version")
-    implementation("io.ktor:ktor-client-serialization:$ktor_version")
+    implementation("io.ktor:ktor-client-js:$ktorVersion")
+    implementation("io.ktor:ktor-client-websockets:$ktorVersion")
+    implementation("io.ktor:ktor-client-serialization:$ktorVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1")
     implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.0-pre.236-kotlin-1.5.30")
-    implementation("com.soywiz.korlibs.krypto:krypto-js:2.2.0")
+    implementation("com.soywiz.korlibs.krypto:krypto-js:2.4.0")
 
     implementation(npm("react", "17.0.2"))
     implementation(npm("react-dom", "17.0.2"))
@@ -99,11 +90,13 @@ dependencies {
 
 }
 
-if(deployTarget != null) {
+// set up deployment if configured.
+
+localProperties["deployTarget"]?.also { deployTarget ->
     tasks.register<Exec>("deploy") {
         dependsOn("browserProductionWebpack")
         workingDir(File(projectDir, "build/distributions"))
-        commandLine("sh", "-c", "scp -r * $deployTarget")
+        commandLine("sh", "-c", "scp -r * '$deployTarget'")
     }
 }
 

@@ -66,7 +66,7 @@ object SavedState {
     /**
      * Save all savers
      */
-    private fun saveAll(event: Event) {
+    private fun saveAll(@Suppress("unused") event: Event) {
         savers.forEach { it() }
     }
 

@@ -113,7 +113,7 @@ val RecordingsState.endDateTime: Date
 @Serializable
 data class SavedRecordingState(
     val selectedStreams: List<String> = listOf(),
-    var expanded: Boolean = true,
+    var expanded: Boolean = false,
     var startTime: Int = 0,
     var endTime: Int = 24 * 60 * 60 - 1,
     var startDate: Double = Date().let { Date(it.getFullYear(), it.getMonth(), it.getDate()) }.getTime(),
@@ -359,7 +359,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                                         applyState {
                                             videoSource?.close()
                                             videoSource = it
-                                            setState { expanded = false }
+                                            expanded = false
                                         }
                                     }
                                     selectedStreams = state.selectedStreams

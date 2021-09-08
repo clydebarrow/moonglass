@@ -22,6 +22,7 @@ import kotlinx.html.InputType
 import org.moonglass.ui.App
 import org.moonglass.ui.MenuGroup
 import org.moonglass.ui.MenuItemTemplate
+import org.moonglass.ui.ModalProps
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.widgets.Dialog
 import org.moonglass.ui.widgets.Toast
@@ -55,7 +56,7 @@ object User {
 
     val group get() = MenuGroup(userLoggedIn, menu)
 
-    class LoginDialog : Dialog() {
+    class LoginDialog(props: ModalProps) : Dialog(props) {
 
 
         override val title: String = "Login required"
