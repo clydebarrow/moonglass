@@ -420,13 +420,13 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
     }
 
     override fun RBuilder.render() {
-        fun compose(z: Int = ZIndex.Default()) = styledDiv {
+        fun compose(z: Int?  = null) = styledDiv {
             css {
                 display = Display.flex
                 position = Position.relative
                 flexDirection = FlexDirection.column
                 justifyContent = JustifyContent.center
-                zIndex = z
+                z?.let { zIndex = it }
             }
             styledDiv {
                 css {

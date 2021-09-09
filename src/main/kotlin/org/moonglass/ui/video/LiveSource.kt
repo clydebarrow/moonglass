@@ -31,7 +31,10 @@ import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.WebSocketSession
 import io.ktor.http.cio.websocket.close
 import io.ktor.utils.io.core.readBytes
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.khronos.webgl.Uint8Array
 import org.moonglass.ui.Duration90k
@@ -69,6 +72,7 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
         }
         onsourceopen = {
             console.log("MediaSource opened")
+            start()
         }
     }
 
@@ -78,8 +82,6 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
     override val srcUrl: String = URL.createObjectURL(mediaSource)
 
     private lateinit var srcBuffer: SourceBuffer
-
-    private var isPaused = false
 
     /**
      * The coroutine scope used to run tasks.
@@ -116,7 +118,7 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
         return client.get<HttpResponse>(url).content.readRemaining(100000, 0).readBytes()
     }
 
-    val SourceBuffer.timeRange: Pair<Double, Double>
+    private val SourceBuffer.timeRange: Pair<Double, Double>
         get() {
             val ranges = buffered
             val length = ranges.length
@@ -128,11 +130,11 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
     /**
      * If a sourcebuffer exceeds the given value, trim it to somewhat less
      */
-    fun SourceBuffer.trimTo(seconds: Int): Boolean {
+    private fun SourceBuffer.trimTo(seconds: Int, hysteresis: Double = 0.5): Boolean {
         val range = timeRange
         if (range.second - range.first > seconds) {
             console.log("time range ${range.first}-${range.second}, removing some")
-            remove(range.first, range.first + (seconds * 1.5).coerceAtMost(range.second))
+            remove(range.first, range.second - (seconds * hysteresis))
             return true
         }
         return false
@@ -179,12 +181,12 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
         srcBuffer.appendBuffer(getInitializationSegment(data.sampleId))     // starts the transfer callbacks
     }
 
+    private var job: Job? = null
     /**
      * open the websocket and start streaming data
      */
     private fun start() {
-        isPaused = false
-        scope.launch {
+        job = scope.launch {
             client.webSocket({
                 url {
                     url(wsUrl)
@@ -192,19 +194,18 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
             }) {
                 try {
                     setup()
-                    while (!isPaused && mediaSource.readyState == ReadyState.OPEN) {
+                    while (isActive && mediaSource.readyState == ReadyState.OPEN) {
                         val message = incoming.receive() as Frame.Binary
                         val data = ByteBuffer(message.data).parseBuffer()
                         if (bufferQueue.size < MAX_BUFFER) {
                             bufferQueue.add(data)
                             transfer()
                         } else
-                            console.log("Discarded buffer $data")
+                            console.log("Discarded buffer: Size =${bufferQueue.size}, timeRange=${srcBuffer.timeRange} ")
                     }
                 } catch (ex: Exception) {
                     console.log("$ex")
                 } finally {
-                    this.close()
                     console.log("Ended websocket for $srcUrl, mediaSource.state = ${mediaSource.readyState}")
                     bufferQueue.clear()
                     srcBuffer.trimTo(0)
@@ -215,13 +216,12 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
 
 
     override fun pause() {
-        console.log("Mediasource paused")
-        isPaused = true
+        job?.cancel()
     }
 
     override fun play() {
-        console.log("Mediasource onPlay")
-        start()
+        if(job?.isActive != true)
+            start()
     }
 
     /**
@@ -234,6 +234,8 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
                 mediaSource.removeSourceBuffer(srcBuffer)
                 mediaSource.endOfStream()
             }
+            job?.cancel()
+            scope.cancel()
         } catch (ex: Exception) {
             console.log("Exception in close: ${ex.message}")
         }

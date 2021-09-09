@@ -23,6 +23,7 @@ import react.State
 
 external interface ContentProps : Props {
     var api: Api
+    var isSideBarShowing: Boolean
 }
 
 abstract class Content<P : ContentProps, S : State>(props: P) : RComponent<P, S>(props)

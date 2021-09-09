@@ -703,3 +703,7 @@ Tooltip magic
   transition:all 0.3s 1s;
   z-index: 60;
 }
+
+.left-anchor {
+  transform-origin: left center;
+}

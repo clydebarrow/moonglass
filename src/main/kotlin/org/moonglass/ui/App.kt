@@ -22,12 +22,17 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
+import kotlinx.css.Position
 import kotlinx.css.display
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
 import kotlinx.css.height
 import kotlinx.css.pct
+import kotlinx.css.position
+import kotlinx.css.vh
+import kotlinx.css.vw
 import kotlinx.css.width
+import kotlinx.css.zIndex
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.widgets.Dialog
 import org.moonglass.ui.widgets.Spinner
@@ -47,6 +52,7 @@ external interface AppState : State {
     var contentShowing: MainMenu.MainMenuItem
     var dialogShowing: KClass<out Dialog>?
     var dismissable: Boolean
+    var isSideBarShowing: Boolean
     var api: Api
 }
 
@@ -56,6 +62,7 @@ class App() : RComponent<Props, AppState>() {
     override fun AppState.init() {
         refreshing = mutableSetOf()
         contentShowing = MainMenu.menu.first().items.first()
+        isSideBarShowing = false
         api = Api()
         refreshList()
     }
@@ -81,19 +88,25 @@ class App() : RComponent<Props, AppState>() {
 
         styledDiv {
             css {
+                position = Position.relative
                 flexGrow = 1.0
                 display = Display.flex
                 flexDirection = FlexDirection.row
-                width = 100.pct
-                height = 100.pct
+                width = 100.vw
+                height = 100.vh
+                zIndex = ZIndex.Content()
             }
-            if (ResponsiveLayout.showSideMenu)
-                child(SideBar::class) {}
+            child(SideBar::class) {
+                attrs {
+                    isSideBarShowing = state.isSideBarShowing
+                }
+            }
             state.contentShowing.apply {
                 contentComponent?.also {
                     child(it) {
                         attrs {
                             api = state.api
+                            isSideBarShowing = state.isSideBarShowing
                         }
                     }
                 } ?: +title
@@ -122,6 +135,12 @@ class App() : RComponent<Props, AppState>() {
 
         val session: Api.Session?
             get() = instance?.state?.api?.session
+
+        var isSideBarShowing: Boolean
+            get() = instance?.state?.isSideBarShowing == true
+            set(value) {
+                instance?.setState { isSideBarShowing = value }
+            }
 
 
         fun refreshAll() {

@@ -22,6 +22,7 @@ import kotlinx.css.JustifyContent
 import kotlinx.css.LinearDimension
 import kotlinx.css.Overflow
 import kotlinx.css.display
+import kotlinx.css.em
 import kotlinx.css.flex
 import kotlinx.css.justifyContent
 import kotlinx.css.maxHeight
@@ -56,14 +57,17 @@ fun StyledDOMBuilder<*>.shrinkable(expanded: Boolean, maxHeight: LinearDimension
         classes.add("shrinkable")
         // hide the dlement rows using maxHeight, with transition, so opening and closing is smooth.
         transform {
-            scaleY(if (expanded) 1.0 else 0.0)
+            //scaleY(if (expanded) 1.0 else 0.0)
         }
         if (expanded) {
             this.maxHeight = maxHeight
             opacity = 1.0
         } else {
-            this.maxHeight = 0.px
             overflow = Overflow.hidden
+            transform {
+                scaleY(0.0)
+            }
+            this.maxHeight = 0.px
             opacity = 0.0
         }
         transition("all", 300.ms)

@@ -22,19 +22,31 @@ import kotlinx.css.CssBuilder
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.FlexWrap
+import kotlinx.css.Overflow
+import kotlinx.css.Position
 import kotlinx.css.backgroundColor
 import kotlinx.css.borderColor
 import kotlinx.css.borderRightWidth
 import kotlinx.css.borderStyle
+import kotlinx.css.bottom
 import kotlinx.css.display
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
 import kotlinx.css.flexWrap
+import kotlinx.css.left
+import kotlinx.css.margin
+import kotlinx.css.opacity
+import kotlinx.css.overflow
 import kotlinx.css.padding
+import kotlinx.css.position
+import kotlinx.css.properties.boxShadow
+import kotlinx.css.properties.s
+import kotlinx.css.properties.transition
 import kotlinx.css.px
-import kotlinx.css.rem
+import kotlinx.css.rgba
 import kotlinx.css.top
 import kotlinx.css.width
+import kotlinx.css.zIndex
 import org.moonglass.ui.style.Media
 import react.Props
 import react.RBuilder
@@ -43,10 +55,62 @@ import react.State
 import styled.css
 import styled.styledDiv
 
+external interface SideBarProps : Props {
+    var isSideBarShowing: Boolean
+}
+
 @JsExport
-class SideBar : RComponent<Props, State>() {
+class SideBar : RComponent<SideBarProps, State>() {
+
+    private val nowShowing get() = props.isSideBarShowing || ResponsiveLayout.showSideMenu
+
+    override fun RBuilder.render() {
+        // outer responsive div
+        dismisser(
+            { App.isSideBarShowing = false },
+            !ResponsiveLayout.showSideMenu && props.isSideBarShowing
+        ) { }
+
+        styledDiv {
+            name = "sideBar"
+            css {
+                if (ResponsiveLayout.showSideMenu)
+                    position = Position.relative
+                else {
+                    position = Position.absolute
+                    boxShadow(rgba(0, 0, 0, 0.2), 2.px, 2.px, 2.px, 1.px)
+                }
+                top = 0.px
+                bottom = 0.px
+                left = 0.px
+                margin(top = ResponsiveLayout.navBarEmHeight)
+                if (nowShowing)
+                    width = ResponsiveLayout.sideBarEmWidth
+                else {
+                    opacity = 0.0
+                    width = 0.px
+                }
+                overflow = Overflow.hidden
+                borderRightWidth = 1.px
+                borderStyle = BorderStyle.solid
+                borderColor = Color.grey
+                zIndex = ZIndex.SideBar()
+                backgroundColor = Color.white
+                transition("all", 0.3.s)
+            }
+            child(Menu::class) {
+                attrs {
+                    style = menuStyle
+                    groups = MainMenu.menu
+                }
+            }
+        }
+    }
 
     companion object {
+
+        var instance: SideBar? = null
+
 
         private val menuStyle = object : MenuStyle {
             override fun CssBuilder.style() {
@@ -56,26 +120,6 @@ class SideBar : RComponent<Props, State>() {
                 flexWrap = FlexWrap.wrap
                 backgroundColor = Color.white
                 padding = Media.padding(6)
-            }
-        }
-    }
-
-    override fun RBuilder.render() {
-        // outer responsive div
-        styledDiv {
-            name = "sideBar"
-            css {
-                top = ResponsiveLayout.navBarEmHeight
-                width = ResponsiveLayout.sideBarEmWidth
-                borderRightWidth = 1.px
-                borderStyle = BorderStyle.solid
-                borderColor = Color.grey
-            }
-            child(Menu::class) {
-                attrs {
-                    style = menuStyle
-                    groups = MainMenu.menu
-                }
             }
         }
     }

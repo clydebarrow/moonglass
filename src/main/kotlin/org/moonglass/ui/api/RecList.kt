@@ -16,17 +16,13 @@
 
 package org.moonglass.ui.api
 
-import kotlinx.css.properties.Time
 import kotlinx.serialization.Serializable
-import org.moonglass.ui.Duration90k
 import org.moonglass.ui.Time90k
-import org.moonglass.ui.as90k
-import org.moonglass.ui.fetch
+import org.moonglass.ui.asSize
 import org.moonglass.ui.formatDate
 import org.moonglass.ui.formatTime
 import org.moonglass.ui.toDuration
-import org.moonglass.ui.widgets.recordings.Stream
-import kotlin.js.Date
+import kotlin.math.pow
 
 @Serializable
 data class RecList(
@@ -61,19 +57,6 @@ data class RecList(
     }
 }
 
-val Long.asSize: String
-    get() {
-        val kb = this / 1024
-        if (kb == 0L)
-            return "$this bytes"
-        val mb = kb / 1024
-        if (mb == 0L)
-            return "$kb kB"
-        val tb = mb / 1024
-        if (tb == 0L)
-            return "$mb MiB"
-        return "$tb TiB"
-    }
 
 
 val RecList.Recording.duration get() = (endTime90k - startTime90k).toDuration

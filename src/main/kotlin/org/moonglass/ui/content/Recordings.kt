@@ -45,18 +45,21 @@ import kotlinx.css.marginTop
 import kotlinx.css.maxHeight
 import kotlinx.css.padding
 import kotlinx.css.paddingBottom
+import kotlinx.css.paddingTop
 import kotlinx.css.pct
 import kotlinx.css.properties.ms
 import kotlinx.css.properties.transition
 import kotlinx.css.px
 import kotlinx.css.rem
 import kotlinx.css.width
+import kotlinx.css.zIndex
 import kotlinx.serialization.Serializable
 import org.moonglass.ui.App
 import org.moonglass.ui.Content
 import org.moonglass.ui.ContentProps
 import org.moonglass.ui.NavBar
 import org.moonglass.ui.ResponsiveLayout
+import org.moonglass.ui.ZIndex
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.api.RecList
 import org.moonglass.ui.applyState
@@ -252,38 +255,41 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
     }
 
     override fun RBuilder.render() {
-        styledDiv {
-            css {
-                width = 100.pct
-                height = 100.pct
-            }
-            name = "RecordingsContent"
-            child(NavBar::class) {
-                attrs {
-                    api = props.api
-                    renderWidget = {
-                        it.child(DateTimeSelector::class) {
-                            attrs {
-                                expanded = state.expanded
-                                startTime = state.startTime
-                                endTime = state.endTime
-                                startDate = state.startDate
-                                maxDuration = state.maxDuration
-                                trimEnds = state.trimEnds
-                                caption = state.caption
+        child(NavBar::class) {
+            attrs {
+                api = props.api
+                isSideBarShowing = props.isSideBarShowing
+                renderWidget = {
+                    it.child(DateTimeSelector::class) {
+                        attrs {
+                            expanded = state.expanded
+                            startTime = state.startTime
+                            endTime = state.endTime
+                            startDate = state.startDate
+                            maxDuration = state.maxDuration
+                            trimEnds = state.trimEnds
+                            caption = state.caption
 
-                                setStartTime = { notify { state.startTime = it } }
-                                setEndTime = { notify { state.endTime = it } }
-                                setStartDate = { notify { state.startDate = it } }
-                                setMaxDuration = { notify { state.maxDuration = it } }
-                                setTrimEnds = { notify { state.trimEnds = it } }
-                                setExpanded = { notify(false) { state.expanded = it } }
-                                setCaption = { notify(false) { state.caption = it } }
-                            }
+                            setStartTime = { notify { state.startTime = it } }
+                            setEndTime = { notify { state.endTime = it } }
+                            setStartDate = { notify { state.startDate = it } }
+                            setMaxDuration = { notify { state.maxDuration = it } }
+                            setTrimEnds = { notify { state.trimEnds = it } }
+                            setExpanded = { notify(false) { state.expanded = it } }
+                            setCaption = { notify(false) { state.caption = it } }
                         }
                     }
                 }
             }
+        }
+        styledDiv {
+            css {
+                zIndex = ZIndex.Content()
+                width = 100.pct
+                height = 100.pct
+                paddingTop = ResponsiveLayout.navBarEmHeight
+            }
+            name = "RecordingsContent"
             styledDiv {
                 name = "Outer"
                 css {
@@ -348,8 +354,8 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                                         applyState {
                                             if (key in selectedStreams) {
                                                 selectedStreams.remove(key)
-                                                recLists.remove(key)
                                             } else {
+                                                recLists.remove(key)
                                                 selectedStreams.add(key)
                                             }
                                         }

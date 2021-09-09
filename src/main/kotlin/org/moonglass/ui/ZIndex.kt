@@ -21,17 +21,20 @@ package org.moonglass.ui
  *
  * Gaps are left in the sequence to allow for fine-tuning
  */
-enum class ZIndex(val index: Int) {
-    Default(0),        // standard (0)
-    NavBar(10),         // navbar here?
-    Dismisser(20),      // overlay to dismiss a menu or dialog
-    Modal(30),
-    Menu(40),           // menu on top of standard stuff
-    Input(50),          // modal input
-    Spinner(60),        // busy indicator
-    Tooltip(70),          // modal input
-    Toast(80);          // transient feedback
+enum class ZIndex() {
+    Default,        // standard (0)
+    Content,
+    NavBar,         // navbar here?
+    SideBar,
+    Dismisser,      // overlay to dismiss a menu or dialog
+    Modal,
+    Menu,           // menu on top of standard stuff
+    Input,          // modal input
+    Spinner,        // busy indicator
+    Tooltip,          // modal input
+    Toast;          // transient feedback
 
+    val index get() = ordinal * 100
     // allow simplified syntax
     operator fun invoke() = index
 }

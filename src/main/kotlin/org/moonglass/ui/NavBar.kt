@@ -18,6 +18,7 @@ package org.moonglass.ui
 
 import kotlinx.css.Align
 import kotlinx.css.Color
+import kotlinx.css.CssBuilder
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.FlexWrap
@@ -35,6 +36,7 @@ import kotlinx.css.backgroundColor
 import kotlinx.css.backgroundImage
 import kotlinx.css.borderBottomWidth
 import kotlinx.css.borderColor
+import kotlinx.css.borderRadius
 import kotlinx.css.content
 import kotlinx.css.display
 import kotlinx.css.flex
@@ -45,29 +47,36 @@ import kotlinx.css.grow
 import kotlinx.css.height
 import kotlinx.css.justifyContent
 import kotlinx.css.justifyItems
+import kotlinx.css.left
 import kotlinx.css.margin
 import kotlinx.css.marginLeft
+import kotlinx.css.opacity
 import kotlinx.css.padding
 import kotlinx.css.pct
 import kotlinx.css.position
+import kotlinx.css.properties.deg
+import kotlinx.css.properties.rotate
+import kotlinx.css.properties.transform
+import kotlinx.css.properties.transition
 import kotlinx.css.px
 import kotlinx.css.rem
+import kotlinx.css.right
 import kotlinx.css.textTransform
+import kotlinx.css.top
 import kotlinx.css.width
 import kotlinx.css.zIndex
+import kotlinx.html.DIV
 import kotlinx.html.js.onClickFunction
 import org.moonglass.ui.api.Api
-import org.moonglass.ui.user.User
 import org.moonglass.ui.utility.Gravatar
 import react.Props
 import react.RBuilder
 import react.RComponent
 import react.State
 import react.dom.attrs
-import react.dom.img
 import react.setState
+import styled.StyledDOMBuilder
 import styled.css
-import styled.styledButton
 import styled.styledDiv
 import styled.styledImg
 import styled.styledSpan
@@ -80,6 +89,7 @@ external interface NavBarState : State {
 external interface NavBarProps : Props {
     var api: Api
     var renderWidget: ((RBuilder) -> Unit)?
+    var isSideBarShowing: Boolean
 }
 
 
@@ -90,19 +100,27 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
         mainMenuOpen = false
     }
 
-    private fun closeMenus() {
-        setState {
-            mainMenuOpen = false
-            userMenuOpen = false
-        }
-    }
-
-    private fun openMain() {
-        setState { mainMenuOpen = true }
-    }
-
     private fun openUser() {
         setState { userMenuOpen = true }
+    }
+
+    private fun StyledDOMBuilder<DIV>.hamburger(n: Int, block: CssBuilder.() -> Unit) {
+        styledSpan {
+
+            css {
+                classes.add("left-anchor")      // can't apply transform-origin here apparently
+                position = Position.relative
+                height = 20.pct
+                backgroundColor = Color.darkSlateGray
+                top = 20.pct * n * 2
+                left = 0.px
+                right = 0.px
+                borderRadius = 3.px
+                transition("all", ResponsiveLayout.menuTransitionTime)
+                display = Display.block
+                block()
+            }
+        }
     }
 
     override fun RBuilder.render() {
@@ -114,14 +132,17 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                 alignItems = Align.center
 
                 backgroundColor = Color.white
-                padding(1.0.rem)
+                padding(0.5.rem)
                 borderBottomWidth = 1.px
                 borderColor = Color.lightGray
-                width = 100.pct
 
-                // keep at top of window in bigger screen modes.
-                zIndex = ZIndex.NavBar()
+                // keep at top of window
+                position = Position.fixed
+                left = 0.px
+                top = 0.px
+                right = 0.px
                 height = ResponsiveLayout.navBarEmHeight
+                zIndex = ZIndex.NavBar()
             }
 
             // left side of navbar, has icon, title and menu widget in smaller modes
@@ -139,36 +160,50 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                     }
                 }
 
-                if (!ResponsiveLayout.current.mobile)
-                    styledSpan {
-                        css {
-                            textTransform = TextTransform.capitalize
-                            marginLeft = 1.rem
-                            flex(1.0, 1.0, LinearDimension.none)
-                        }
-                        +Theme.title
+                styledSpan {
+                    css {
+                        if (ResponsiveLayout.current.mobile)
+                            display = Display.none
+                        textTransform = TextTransform.capitalize
+                        marginLeft = 1.rem
+                        flex(1.0, 1.0, LinearDimension.none)
                     }
+                    +Theme.title
+                }
                 // menu button shown only in small layouts
-                if (!ResponsiveLayout.showSideMenu) {
-                    styledButton {
-                        css {
-                            flex(0.0, 0.0, LinearDimension.none)
-                            alignContent = Align.end
-                            padding(left = .5.rem, right = .5.rem)
-                        }
-                        img(src = "/images/menu.svg") { }
-                        attrs {
-                            onClickFunction = { openMain() }
-                        }
+                styledDiv {
+                    name = "menuToggler"
+                    css {
+                        if (ResponsiveLayout.showSideMenu)
+                            display = Display.none
+                        height = 1.0.rem
+                        width = 1.5.rem
+                        flex(0.0, 0.0, LinearDimension.none)
+                        alignContent = Align.end
+                        margin(left = 1.rem, right = 1.rem)
                     }
-                    if (state.mainMenuOpen) {
-                        child(Menu::class) {
-                            attrs {
-                                groups = MainMenu.menu
-                                style = ContextStyle(vert = 4.0, horz = 2.0)
-                                dismiss = { closeMenus() }
+                    hamburger(0) {
+                        if (props.isSideBarShowing) {
+                            width = 115.pct             // this value determined by trial and error.
+                            transform {
+                                rotate(45.deg)
                             }
                         }
+                    }
+                    hamburger(1) {
+                        if (props.isSideBarShowing)
+                            opacity = 0.0
+                    }
+                    hamburger(2) {
+                        if (props.isSideBarShowing) {
+                            width = 115.pct
+                            transform {
+                                rotate((-45).deg)
+                            }
+                        }
+                    }
+                    attrs {
+                        onClickFunction = { App.isSideBarShowing = !props.isSideBarShowing }
                     }
                 }
             }
@@ -208,20 +243,6 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                         alignContent = Align.start
                         width = LinearDimension.auto
                         padding(left = 0.5.rem, right = 0.5.rem, bottom = 0.5.rem)
-                    }
-                }
-            }
-        }
-        // drop-down user menu
-        if (state.userMenuOpen) {
-            child(Menu::class) {
-                attrs {
-                    groups = listOf(User.group)
-                    style = ContextStyle(vert = 4.0, horz = -2.0)
-                    dismiss = {
-                        setState({ state ->
-                            state.apply { userMenuOpen = false }
-                        })
                     }
                 }
             }

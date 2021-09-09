@@ -16,8 +16,10 @@
 
 package org.moonglass.ui
 
+import kotlinext.js.getOwnPropertyNames
 import kotlinx.browser.window
 import kotlinx.css.LinearDimension
+import kotlinx.css.properties.s
 import kotlinx.css.rem
 import kotlinx.css.vh
 import kotlinx.css.vw
@@ -32,17 +34,21 @@ object ResponsiveLayout {
         enormous(1600)
     }
 
+    val hasTouch = window.navigator.maxTouchPoints > 0
+
     // any aspect ratio less than this is regarded as "Portrait"
     const val portraitAspect = 1.5
 
     // show the side menu if the aspect ration is greathr than this
-    val showMenuAspect get() = if (isPortrait) 1.0 else 1.8
+    val showMenuAspect get() = 1.8
 
     val aspectRatio get() = (window.innerWidth.toDouble() / window.innerHeight)
 
     val isPortrait get() = aspectRatio < portraitAspect
 
-    val showSideMenu: Boolean get() = aspectRatio > showMenuAspect && !current.mobile
+    val showSideMenu: Boolean get() = !hasTouch && aspectRatio > showMenuAspect && !current.mobile
+
+    val menuTransitionTime = 0.3.s
 
     val current: Size
         get() {

@@ -61,6 +61,7 @@ import org.moonglass.ui.api.getEndTime
 import org.moonglass.ui.api.getStartDate
 import org.moonglass.ui.api.getStartTime
 import org.moonglass.ui.api.storage
+import org.moonglass.ui.asSize
 import org.moonglass.ui.name
 import org.moonglass.ui.style.column
 import org.moonglass.ui.style.expandButton
@@ -161,9 +162,17 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                     display = Display.flex
                     flex(1.0, 0.0, 0.px)
                     padding(left = 0.5.rem, right = 0.5.rem)
+                }
+                +"$hours / ${stream.metaData.days.size} days"
+            }
+            styledDiv {
+                css {
+                    display = Display.flex
+                    flex(1.0, 0.0, 0.px)
+                    padding(left = 0.5.rem, right = 0.5.rem)
                     marginRight = LinearDimension.auto
                 }
-                +"$hours over ${stream.metaData.days.size} days"
+                +"${stream.metaData.fsBytes.asSize} / ${stream.metaData.retainBytes.asSize}"
             }
             styledImg(src = "/images/liveView.svg") {
                 attrs {
@@ -188,7 +197,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
             }
         }
         styledDiv {
-            shrinkable(isSelected, (recordings.size * 2).rem)
+            shrinkable(isSelected, (recordings.size * 2.5).rem)
             css {
                 display = Display.flex
                 flexDirection = FlexDirection.column

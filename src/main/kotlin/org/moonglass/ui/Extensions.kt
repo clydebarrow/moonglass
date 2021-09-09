@@ -50,9 +50,19 @@ import styled.StyledDOMBuilder
 import styled.css
 import styled.styledDiv
 import kotlin.js.Date
+import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.time.Duration
 
 external fun encodeURIComponent(str: String): String
+
+object Extensions {
+    class Size(val name: String, val value: Double) {
+        fun format(number: Double) = "${(number / value).minTwo} $name"
+    }
+    val sizes = listOf("bytes", "KiB", "MiB", "GiB", "TiB")
+        .mapIndexed { index, s -> Size(s, 1024.0.pow(index)) }
+}
 
 /**
  * Convenience function for setting state in a component. It takes care of returning the mutated state.
@@ -156,6 +166,28 @@ fun StyledDOMBuilder<*>.cardStyle() {
 
 fun Int.digits(num: Int): String = toString().padStart(num, '0')
 
+fun Double.precision(digits: Int): String {
+    val whole = toLong()
+    val frac = ((this - whole) * 10.0.pow(digits)).toInt().digits(digits)
+    return "$whole.$frac"
+}
+
+val Double.minTwo: String
+    get() {
+        if (this > 10.0)
+            return roundToInt().toString()
+        return precision(1)
+
+    }
+
+// get a size as a string like "125 bytes" or "1.5 GiB"
+val Long.asSize: String
+    get() {
+        return Extensions.sizes.let { sizes->
+            (sizes.firstOrNull { (this / it.value).toInt() in (1..999) } ?: sizes.last()).format(this.toDouble())
+        }
+    }
+
 //const val timePattern = "dd mmm yyyy HH:MM:ss"
 val Date.formatDate: String
     get() {
@@ -241,7 +273,7 @@ fun RBuilder.dismisser(
     styledDiv {
         name = "dismisser"
         css {
-            position = Position.absolute
+            position = Position.fixed
             left = 0.px
             top = 0.px
             bottom = 0.px
