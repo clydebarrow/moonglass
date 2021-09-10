@@ -16,28 +16,13 @@
 
 package org.moonglass.ui.style
 
-import kotlinx.css.Display
-import kotlinx.css.FlexBasis
-import kotlinx.css.JustifyContent
-import kotlinx.css.LinearDimension
-import kotlinx.css.Overflow
-import kotlinx.css.display
-import kotlinx.css.em
-import kotlinx.css.flex
-import kotlinx.css.justifyContent
-import kotlinx.css.maxHeight
-import kotlinx.css.opacity
-import kotlinx.css.overflow
-import kotlinx.css.padding
+import kotlinx.css.*
 import kotlinx.css.properties.deg
 import kotlinx.css.properties.ms
 import kotlinx.css.properties.rotate
 import kotlinx.css.properties.scaleY
 import kotlinx.css.properties.transform
 import kotlinx.css.properties.transition
-import kotlinx.css.px
-import kotlinx.css.rem
-import kotlinx.css.width
 import kotlinx.html.js.onClickFunction
 import org.w3c.dom.events.Event
 import react.dom.attrs
@@ -85,6 +70,7 @@ fun StyledDOMBuilder<*>.expandButton(expanded: Boolean, onClick: ((Event) -> Uni
             onClick?.also { onClickFunction = it }
         }
         css {
+            cursor = Cursor.pointer
             transition("all", 300.ms)
             width = 20.px
             if (expanded)

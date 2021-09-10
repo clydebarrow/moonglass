@@ -151,6 +151,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
             expandButton(isSelected)
             styledDiv {
                 css {
+                    cursor = Cursor.pointer
                     display = Display.flex
                     flex(1.0, 0.0, 0.px)
                 }
