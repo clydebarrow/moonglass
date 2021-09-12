@@ -59,9 +59,18 @@ object SavedState {
      * Register a callback for window unload
      */
 
-    fun onUnload(callback: () -> Unit) {
+    fun addOnUnload(callback: () -> Unit) {
         savers.add(callback)
     }
+
+    /**
+     * Remove a callback
+     */
+
+    fun removeOnUnload(callback: () -> Unit) {
+        savers.remove(callback)
+    }
+
 
     /**
      * Save all savers

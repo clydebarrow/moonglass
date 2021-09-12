@@ -17,13 +17,14 @@
 package org.moonglass.ui
 
 import org.moonglass.ui.api.Api
+import org.moonglass.ui.utility.StateVar
 import react.Props
 import react.RComponent
 import react.State
 
 external interface ContentProps : Props {
     var api: Api
-    var isSideBarShowing: Boolean
+    var isSideBarShowing: StateVar<Boolean>
 }
 
 abstract class Content<P : ContentProps, S : State>(props: P) : RComponent<P, S>(props)

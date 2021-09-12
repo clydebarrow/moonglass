@@ -34,6 +34,7 @@ import kotlinx.css.vw
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import org.moonglass.ui.api.Api
+import org.moonglass.ui.utility.StateVar
 import org.moonglass.ui.widgets.Dialog
 import org.moonglass.ui.widgets.Spinner
 import org.moonglass.ui.widgets.Toast
@@ -52,7 +53,7 @@ external interface AppState : State {
     var contentShowing: MainMenu.MainMenuItem
     var dialogShowing: KClass<out Dialog>?
     var dismissable: Boolean
-    var isSideBarShowing: Boolean
+    var isSideBarShowing: StateVar<Boolean>
     var api: Api
 }
 
@@ -62,7 +63,7 @@ class App() : RComponent<Props, AppState>() {
     override fun AppState.init() {
         refreshing = mutableSetOf()
         contentShowing = MainMenu.menu.first().items.first()
-        isSideBarShowing = false
+        isSideBarShowing = StateVar(false, this@App)
         api = Api()
         refreshList()
     }
@@ -135,12 +136,6 @@ class App() : RComponent<Props, AppState>() {
 
         val session: Api.Session?
             get() = instance?.state?.api?.session
-
-        var isSideBarShowing: Boolean
-            get() = instance?.state?.isSideBarShowing == true
-            set(value) {
-                instance?.setState { isSideBarShowing = value }
-            }
 
 
         fun refreshAll() {

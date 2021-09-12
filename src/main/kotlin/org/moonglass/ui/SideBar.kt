@@ -48,6 +48,7 @@ import kotlinx.css.top
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import org.moonglass.ui.style.Media
+import org.moonglass.ui.utility.StateVar
 import react.Props
 import react.RBuilder
 import react.RComponent
@@ -56,19 +57,19 @@ import styled.css
 import styled.styledDiv
 
 external interface SideBarProps : Props {
-    var isSideBarShowing: Boolean
+    var isSideBarShowing: StateVar<Boolean>
 }
 
 @JsExport
 class SideBar : RComponent<SideBarProps, State>() {
 
-    private val nowShowing get() = props.isSideBarShowing || ResponsiveLayout.showSideMenu
+    private val nowShowing get() = props.isSideBarShowing() || ResponsiveLayout.showSideMenu
 
     override fun RBuilder.render() {
         // outer responsive div
         dismisser(
-            { App.isSideBarShowing = false },
-            !ResponsiveLayout.showSideMenu && props.isSideBarShowing
+            { props.isSideBarShowing.value = false },
+            !ResponsiveLayout.showSideMenu && props.isSideBarShowing()
         ) { }
 
         styledDiv {

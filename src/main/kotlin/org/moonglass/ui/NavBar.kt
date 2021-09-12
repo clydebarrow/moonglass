@@ -69,11 +69,13 @@ import kotlinx.html.DIV
 import kotlinx.html.js.onClickFunction
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.utility.Gravatar
+import org.moonglass.ui.utility.StateVar
 import react.Props
 import react.RBuilder
 import react.RComponent
 import react.State
 import react.dom.attrs
+import react.dom.onClick
 import react.setState
 import styled.StyledDOMBuilder
 import styled.css
@@ -89,7 +91,7 @@ external interface NavBarState : State {
 external interface NavBarProps : Props {
     var api: Api
     var renderWidget: ((RBuilder) -> Unit)?
-    var isSideBarShowing: Boolean
+    var isSideBarShowing: StateVar<Boolean>
 }
 
 
@@ -161,6 +163,9 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                 }
 
                 styledSpan {
+                    attrs {
+                        onClick = { props.isSideBarShowing.value = !props.isSideBarShowing() }
+                    }
                     css {
                         if (ResponsiveLayout.current.mobile)
                             display = Display.none
@@ -183,19 +188,20 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                         margin(left = 1.rem, right = 1.rem)
                     }
                     hamburger(0) {
-                        if (props.isSideBarShowing) {
+                        if (props.isSideBarShowing()) {
                             width = 115.pct             // this value determined by trial and error.
                             transform {
                                 rotate(45.deg)
                             }
+
                         }
                     }
                     hamburger(1) {
-                        if (props.isSideBarShowing)
+                        if (props.isSideBarShowing())
                             opacity = 0.0
                     }
                     hamburger(2) {
-                        if (props.isSideBarShowing) {
+                        if (props.isSideBarShowing()) {
                             width = 115.pct
                             transform {
                                 rotate((-45).deg)
@@ -203,7 +209,7 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                         }
                     }
                     attrs {
-                        onClickFunction = { App.isSideBarShowing = !props.isSideBarShowing }
+                        onClick = { props.isSideBarShowing.value = !props.isSideBarShowing() }
                     }
                 }
             }
