@@ -214,6 +214,7 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                 }
             }
             styledDiv {
+                name = "widgetWrapper"
                 css {
                     display = Display.flex
                     flexGrow = 1.0
@@ -231,7 +232,7 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                     alignItems = Align.center
                 }
                 attrs {
-                    onClickFunction = { openUser() }
+                    onClick = { openUser() }
                 }
                 val imgSrc = props.api.session?.let { Gravatar.url(it.username) } ?: "/images/profile.svg"
                 styledImg(src = imgSrc) {

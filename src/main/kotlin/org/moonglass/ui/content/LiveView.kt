@@ -16,21 +16,7 @@
 
 package org.moonglass.ui.content
 
-import kotlinx.css.Align
-import kotlinx.css.Display
-import kotlinx.css.GridTemplateColumns
-import kotlinx.css.JustifyContent
-import kotlinx.css.alignItems
-import kotlinx.css.display
-import kotlinx.css.gridTemplateColumns
-import kotlinx.css.height
-import kotlinx.css.justifyContent
-import kotlinx.css.padding
-import kotlinx.css.paddingTop
-import kotlinx.css.pct
-import kotlinx.css.rem
-import kotlinx.css.width
-import kotlinx.css.zIndex
+import kotlinx.css.*
 import org.moonglass.ui.Content
 import org.moonglass.ui.ContentProps
 import org.moonglass.ui.NavBar
@@ -47,22 +33,18 @@ import styled.styledSelect
 
 
 class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props) {
-    override fun RBuilder.render() {
-        child(NavBar::class) {
-            attrs {
-                api = props.api
-                isSideBarShowing = props.isSideBarShowing
-                renderWidget = {
-                    styledSelect {
-                        option(content = "4x4")
-                    }
-                }
-            }
+    override fun RBuilder.renderNavBarWidget() {
+        styledSelect {
+            option(content = "4x4")
         }
+    }
+
+    override fun RBuilder.renderContent() {
         styledDiv {
             css {
                 justifyContent = JustifyContent.center
                 gridTemplateColumns = GridTemplateColumns("50% 50%")
+                gridTemplateRows = GridTemplateRows("50% 50%")
                 alignItems = Align.center
                 padding(0.25.rem)
                 display = Display.grid

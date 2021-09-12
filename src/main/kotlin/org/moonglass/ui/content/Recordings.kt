@@ -251,26 +251,21 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
             applyState { handler() }
     }
 
-    override fun RBuilder.render() {
-        child(NavBar::class) {
+    override fun RBuilder.renderNavBarWidget() {
+        console.log("Rendernavbarwidget")
+        child(DateTimeSelector::class) {
             attrs {
-                api = props.api
-                isSideBarShowing = props.isSideBarShowing
-                renderWidget = {
-                    it.child(DateTimeSelector::class) {
-                        attrs {
-                            expanded = state.expanded
-                            startTime = state.startTime
-                            endTime = state.endTime
-                            startDate = state.startDate
-                            maxDuration = state.maxDuration
-                            trimEnds = state.trimEnds
-                            caption = state.caption
-                        }
-                    }
-                }
+                expanded = state.expanded
+                startTime = state.startTime
+                endTime = state.endTime
+                startDate = state.startDate
+                maxDuration = state.maxDuration
+                trimEnds = state.trimEnds
+                caption = state.caption
             }
         }
+    }
+    override fun RBuilder.renderContent() {
         styledDiv {
             css {
                 zIndex = ZIndex.Content()

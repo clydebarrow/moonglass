@@ -16,11 +16,16 @@
 
 package org.moonglass.ui
 
+import kotlinx.html.DIV
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.utility.StateVar
 import react.Props
+import react.RBuilder
 import react.RComponent
 import react.State
+import react.dom.option
+import styled.StyledDOMBuilder
+import styled.styledSelect
 
 external interface ContentProps : Props {
     var api: Api
@@ -29,5 +34,19 @@ external interface ContentProps : Props {
 
 abstract class Content<P : ContentProps, S : State>(props: P) : RComponent<P, S>(props) {
 
+    abstract fun RBuilder.renderNavBarWidget(): Unit
+
+    abstract fun RBuilder.renderContent(): Unit
+
+    override fun RBuilder.render() {
+        child(NavBar::class) {
+            attrs {
+                api = props.api
+                isSideBarShowing = props.isSideBarShowing
+                renderWidget = { it.renderNavBarWidget() }
+            }
+        }
+        renderContent()
+    }
 }
 
