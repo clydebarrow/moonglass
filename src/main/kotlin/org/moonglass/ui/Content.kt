@@ -27,4 +27,7 @@ external interface ContentProps : Props {
     var isSideBarShowing: StateVar<Boolean>
 }
 
-abstract class Content<P : ContentProps, S : State>(props: P) : RComponent<P, S>(props)
+abstract class Content<P : ContentProps, S : State>(props: P) : RComponent<P, S>(props) {
+
+}
+

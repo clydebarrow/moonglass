@@ -16,6 +16,7 @@
 
 package org.moonglass.ui
 
+import org.moonglass.ui.content.LiveView
 import org.moonglass.ui.content.Recordings
 import react.State
 import kotlin.reflect.KClass
@@ -60,7 +61,7 @@ object MainMenu {
             "Video",
             listOf(
                 MainMenuItem("Recordings", Recordings::class) { App.refreshAll() },
-                MainMenuItem("Live view"),
+                MainMenuItem("Live view", LiveView::class),
             )
         ),
         MenuGroup(

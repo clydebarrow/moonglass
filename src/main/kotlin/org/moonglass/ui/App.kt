@@ -61,6 +61,7 @@ external interface AppState : State {
 class App() : RComponent<Props, AppState>() {
 
     override fun AppState.init() {
+        instance = this@App
         refreshing = mutableSetOf()
         contentShowing = MainMenu.menu.first().items.first()
         isSideBarShowing = StateVar(false, this@App)
@@ -69,7 +70,6 @@ class App() : RComponent<Props, AppState>() {
     }
 
     override fun componentDidMount() {
-        instance = this@App
         window.addEventListener("resize", {
             forceUpdate()
         })
@@ -151,6 +151,7 @@ class App() : RComponent<Props, AppState>() {
         val selectedItemId: String? get() = instance?.state?.contentShowing?.menuId
 
         fun showContent(item: MainMenu.MainMenuItem) {
+            console.log("showContent ${item.title}")
             instance?.apply {
                 if (item.contentComponent == null)
                     Toast.toast("No content implemented for ${item.title}")
