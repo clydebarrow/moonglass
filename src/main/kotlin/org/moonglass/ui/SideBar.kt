@@ -68,8 +68,9 @@ class SideBar : RComponent<SideBarProps, State>() {
     override fun RBuilder.render() {
         // outer responsive div
         dismisser(
-            { props.isSideBarShowing.value = false },
-            !ResponsiveLayout.showSideMenu && props.isSideBarShowing()
+            onDismiss = { props.isSideBarShowing.value = false },
+            visible = !ResponsiveLayout.showSideMenu && props.isSideBarShowing(),
+            z = ZIndex.SideBar()-1
         ) { }
 
         styledDiv {

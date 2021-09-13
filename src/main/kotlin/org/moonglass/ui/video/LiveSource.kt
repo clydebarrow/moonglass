@@ -71,7 +71,6 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
             console.log("MediaSource closed: ${it.type}")
         }
         onsourceopen = {
-            console.log("MediaSource opened")
             start()
         }
     }

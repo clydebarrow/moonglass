@@ -25,9 +25,12 @@ import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.FlexWrap
 import kotlinx.css.JustifyContent
+import kotlinx.css.JustifyItems
 import kotlinx.css.LinearDimension
+import kotlinx.css.TextAlign
 import kotlinx.css.alignContent
 import kotlinx.css.alignItems
+import kotlinx.css.backgroundColor
 import kotlinx.css.borderBottomColor
 import kotlinx.css.borderBottomWidth
 import kotlinx.css.borderLeftColor
@@ -37,8 +40,10 @@ import kotlinx.css.flex
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
 import kotlinx.css.flexWrap
+import kotlinx.css.fontSize
 import kotlinx.css.height
 import kotlinx.css.justifyContent
+import kotlinx.css.justifyItems
 import kotlinx.css.marginLeft
 import kotlinx.css.marginRight
 import kotlinx.css.marginTop
@@ -51,13 +56,13 @@ import kotlinx.css.properties.ms
 import kotlinx.css.properties.transition
 import kotlinx.css.px
 import kotlinx.css.rem
+import kotlinx.css.textAlign
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import kotlinx.serialization.Serializable
 import org.moonglass.ui.App
 import org.moonglass.ui.Content
 import org.moonglass.ui.ContentProps
-import org.moonglass.ui.NavBar
 import org.moonglass.ui.ResponsiveLayout
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.api.Api
@@ -97,7 +102,7 @@ external interface RecordingsState : State {
     var endTime: StateVar<Int>        // also inseconds
     var maxDuration: StateVar<Int>
     var trimEnds: StateVar<Boolean>
-    var caption: StateVar<Boolean>
+    var subTitle: StateVar<Boolean>
     var expanded: StateVar<Boolean>
 
     var videoSource: VideoSource?
@@ -121,7 +126,7 @@ data class SavedRecordingState(
     var endTime: Int = 24 * 60 * 60 - 1,
     var maxDuration: Int = 1,
     var trimEnds: Boolean = true,
-    var caption: Boolean = false
+    var subTitle: Boolean = false
 
 ) {
     companion object {
@@ -133,7 +138,7 @@ data class SavedRecordingState(
                 state.endTime(),
                 state.maxDuration(),
                 state.trimEnds(),
-                state.caption()
+                state.subTitle()
             )
         }
     }
@@ -159,7 +164,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
         selectedStreams = saved.selectedStreams.toMutableSet()
         maxDuration = createValue(saved.maxDuration)
         trimEnds = createValue(saved.trimEnds)
-        caption = createValue(saved.caption)
+        subTitle = createValue(saved.subTitle)
         startTime = createValue(saved.startTime)
         endTime = createValue(saved.endTime)
         expanded = createValue(saved.expanded)
@@ -202,7 +207,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
             SavedState.save(saveKey, SavedRecordingState.from(state))
         })
         listOf(maxDuration, startTime, endTime, startDate, trimEnds).forEach {
-            it.listener = { updateRecordings() }
+            it.listener = { updateRecordings(true) }
         }
     }
 
@@ -217,10 +222,11 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
 
     /**
      * Update the recordings for each selected (i.e. expanded) stream.
+     * @param force If true, refresh all expanded streams.
      */
-    private fun updateRecordings() {
+    private fun updateRecordings(force: Boolean = false) {
         // filter out unselected streams, and those for which we already have a set of recordings.
-        val needy = cameras.values.flatten().filter { it.key in state.selectedStreams && it.key !in state.recLists }
+        val needy = cameras.values.flatten().filter { it.key in state.selectedStreams && (force || it.key !in state.recLists) }
         if (needy.isNotEmpty()) {
             // insert an empty list to prevent repeating the fetch below if render is called again before we finish.
             needy.forEach { state.recLists[it.key] = RecList() }
@@ -261,7 +267,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                 startDate = state.startDate
                 maxDuration = state.maxDuration
                 trimEnds = state.trimEnds
-                caption = state.caption
+                subTitle = state.subTitle
             }
         }
     }
@@ -356,6 +362,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                                     maxEnd = state.maxEndDateTime
                                     minStart = state.minStartDateTime
                                     playingRecording = (state.videoSource as? RecordingSource)?.recording
+                                    subTitle = state.subTitle()
                                 }
                             }
                         }
@@ -378,10 +385,29 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                         }
 
                     }
-                    child(Player::class) {
-                        attrs {
-                            key = "MainPlayer"
-                            source = state.videoSource
+                    styledDiv {
+                        css {
+                            display = Display.flex
+                            flexDirection = FlexDirection.column
+                            justifyItems = JustifyItems.center
+                            width = 100.pct
+                            height = 100.pct
+                        }
+
+                        styledDiv {
+                            css {
+                                display = Display.flex
+                                fontSize = 1.2.rem
+                                textAlign = TextAlign.center
+                                backgroundColor = Color.lightGray
+                            }
+                            +(state.videoSource?.caption ?: "---")
+                        }
+
+                        child(Player::class) {
+                            attrs {
+                                source = state.videoSource
+                            }
                         }
                     }
                 }

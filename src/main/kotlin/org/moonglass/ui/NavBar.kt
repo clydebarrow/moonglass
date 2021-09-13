@@ -220,6 +220,7 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                     flexGrow = 1.0
                     justifyItems = JustifyItems.center
                     alignItems = Align.center
+                    marginLeft = 2.rem
                 }
                 props.renderWidget?.invoke(this)
             }

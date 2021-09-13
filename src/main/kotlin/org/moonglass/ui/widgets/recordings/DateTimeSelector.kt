@@ -31,7 +31,6 @@ import kotlinx.css.display
 import kotlinx.css.flexDirection
 import kotlinx.css.gridTemplateColumns
 import kotlinx.css.justifyContent
-import kotlinx.css.margin
 import kotlinx.css.padding
 import kotlinx.css.pct
 import kotlinx.css.position
@@ -39,7 +38,6 @@ import kotlinx.css.rem
 import kotlinx.css.top
 import kotlinx.css.width
 import kotlinx.css.zIndex
-import kotlinx.html.InputType
 import kotlinx.html.id
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
@@ -49,6 +47,7 @@ import org.moonglass.ui.dismisser
 import org.moonglass.ui.formatDate
 import org.moonglass.ui.formatHhMm
 import org.moonglass.ui.name
+import org.moonglass.ui.style.checkBox
 import org.moonglass.ui.style.expandButton
 import org.moonglass.ui.style.shrinkable
 import org.moonglass.ui.utility.StateVar
@@ -61,11 +60,9 @@ import react.State
 import react.dom.KeyboardEvent
 import react.dom.ReactHTML.label
 import react.dom.attrs
-import react.dom.onChange
 import react.dom.onKeyDown
 import styled.css
 import styled.styledDiv
-import styled.styledInput
 import styled.styledOption
 import styled.styledSelect
 import kotlin.js.Date
@@ -77,7 +74,7 @@ external interface DateTimeSelectorProps : Props {
     var startDate: StateVar<Date>
     var maxDuration: StateVar<Int>
     var trimEnds: StateVar<Boolean>
-    var caption: StateVar<Boolean>
+    var subTitle: StateVar<Boolean>
 }
 
 class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
@@ -181,38 +178,8 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
                     use24HourTime = true
                     onChange = { props.endTime.value = it }
                 }
-                label {
-                    attrs {
-                        htmlFor = "trimCheckbox"
-                    }
-                    +"Trim to start/end:"
-                }
-                styledInput(InputType.checkBox) {
-                    attrs {
-                        id = "trimCheckBox"
-                        checked = (props.trimEnds())
-                        onChange = { props.trimEnds.value = !props.trimEnds() }
-                    }
-                    css {
-                        margin(left = 1.5.rem)
-                    }
-                }
-                label {
-                    attrs {
-                        htmlFor = "captionCheckBox"
-                    }
-                    +"Add timestamp subtitles:"
-                }
-                styledInput(InputType.checkBox) {
-                    attrs {
-                        id = "captionCheckBox"
-                        checked = props.caption()
-                        onChange = { props.caption.value = !props.caption() }
-                    }
-                    css {
-                        margin(left = 1.5.rem)
-                    }
-                }
+                checkBox("Trim to start/end", props.trimEnds)
+                checkBox("Add timestamp subtitles", props.subTitle)
                 label {
                     attrs {
                         htmlFor = "maxDurationSelect"

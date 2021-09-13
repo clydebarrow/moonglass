@@ -39,7 +39,6 @@ import kotlinx.css.flexGrow
 import kotlinx.css.flexWrap
 import kotlinx.css.fontWeight
 import kotlinx.css.justifyContent
-import kotlinx.css.marginLeft
 import kotlinx.css.marginRight
 import kotlinx.css.opacity
 import kotlinx.css.overflowY
@@ -216,7 +215,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                     val bitfrac = ((recording.bitrate - bitwhole.toDouble()) * 10).roundToInt()
                     tooltip = "$resolution ${recording.fps}fps ${recording.storage} $bitwhole.$bitfrac Mbps"
                     attrs {
-                        onClickFunction = { props.showVideo(RecordingSource(stream, recording)) }
+                        onClickFunction = { props.showVideo(RecordingSource(stream, recording, props.subTitle)) }
                     }
                     css {
                         position = Position.relative    // required to make tooltip work.
@@ -289,6 +288,7 @@ external interface CameraListProps : Props {
     var minStart: Time90k
     var maxEnd: Time90k
     var playingRecording: RecList.Recording?
+    var subTitle: Boolean
 
     // callbacks
     var toggleStream: (String) -> Unit

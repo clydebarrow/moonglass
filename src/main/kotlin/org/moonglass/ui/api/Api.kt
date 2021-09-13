@@ -51,7 +51,7 @@ data class Api(
     data class Camera(
         val description: String, // Hikvision Driveway Camera
         val shortName: String, // Driveway
-        val streams: Map<String, ApiStream>,
+        val streams: Map<String, StreamData>,
         val uuid: String // 7f2e2a50-1e68-4647-817b-03089ca2003e
     )
 
@@ -63,7 +63,7 @@ data class Api(
     )
 
     @Serializable
-    data class ApiStream(
+    data class StreamData(
         val days: Map<String, Day> = mapOf(),
         val fsBytes: Long, // 38785380352
         val maxEndTime90k: Long, // 146704410690765

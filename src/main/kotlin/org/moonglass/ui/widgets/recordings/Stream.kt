@@ -25,7 +25,7 @@ import org.moonglass.ui.formatDate
 import org.moonglass.ui.formatTime
 import org.moonglass.ui.url
 
-data class Stream(val name: String, val metaData: Api.ApiStream, val camera: Api.Camera) {
+data class Stream(val name: String, val metaData: Api.StreamData, val camera: Api.Camera) {
     val key = "${camera.uuid}/${name}"
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -46,13 +46,13 @@ data class Stream(val name: String, val metaData: Api.ApiStream, val camera: Api
             recording.startTime90k.formatTime + recording.endTime90k.formatTime + ".mp4"
     }
 
-    fun url(recording: RecList.Recording, caption: Boolean): String {
+    fun url(recording: RecList.Recording, subTitle: Boolean): String {
         val params = mutableMapOf<String, String?>(
             "s" to "${recording.startId}-${recording.endId}@${recording.openId}"
         )
-        if (caption)
+        if (subTitle)
             params["ts"] = null
-        return "/api/cameras/${camera.uuid}/${name}/view.mp4".url(params)
+        return "/api/cameras/$key/view.mp4".url(params)
     }
 
     val wsUrl = window.location.let {
@@ -63,5 +63,22 @@ data class Stream(val name: String, val metaData: Api.ApiStream, val camera: Api
 
     override fun toString(): String {
         return "${camera.shortName} ($name)"
+    }
+}
+
+/**
+ * Find a stream from an Api record.
+ * @param key The stream key, in the form <cameraUuid>/<streamName>
+ * @return The stream, or null if not found
+ *
+ */
+fun Api.streamFor(key: String): Stream? {
+    val pieces = key.split('/')
+    if (pieces.size != 2)
+        return null
+    return cameras.firstOrNull { it.uuid == pieces[0] }?.let { camera ->
+        camera.streams[pieces[1]]?.let {
+            Stream(pieces[1], it, camera)
+        }
     }
 }

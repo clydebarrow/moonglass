@@ -22,9 +22,9 @@ import org.moonglass.ui.api.getStartDate
 import org.moonglass.ui.api.getStartTime
 import org.moonglass.ui.widgets.recordings.Stream
 
-class RecordingSource(stream: Stream, val recording: RecList.Recording) : VideoSource {
+class RecordingSource(stream: Stream, val recording: RecList.Recording, subTitle: Boolean) : VideoSource {
 
     override val caption = "$stream ${recording.getStartDate()} ${recording.getStartTime()}-${recording.getEndTime()}"
-    override val srcUrl: String = stream.url(recording, false)
+    override val srcUrl: String = stream.url(recording, subTitle)
 
 }

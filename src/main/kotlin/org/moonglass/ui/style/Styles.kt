@@ -16,20 +16,43 @@
 
 package org.moonglass.ui.style
 
-import kotlinx.css.*
+import kotlinx.css.Cursor
+import kotlinx.css.Display
+import kotlinx.css.JustifyContent
+import kotlinx.css.LinearDimension
+import kotlinx.css.Overflow
+import kotlinx.css.cursor
+import kotlinx.css.display
+import kotlinx.css.flex
+import kotlinx.css.justifyContent
+import kotlinx.css.margin
+import kotlinx.css.maxHeight
+import kotlinx.css.opacity
+import kotlinx.css.overflow
+import kotlinx.css.padding
 import kotlinx.css.properties.deg
 import kotlinx.css.properties.ms
 import kotlinx.css.properties.rotate
 import kotlinx.css.properties.scaleY
 import kotlinx.css.properties.transform
 import kotlinx.css.properties.transition
+import kotlinx.css.px
+import kotlinx.css.rem
+import kotlinx.css.width
+import kotlinx.html.InputType
+import kotlinx.html.id
 import kotlinx.html.js.onClickFunction
+import org.moonglass.ui.utility.StateVar
 import org.w3c.dom.events.Event
+import react.RBuilder
 import react.dom.attrs
+import react.dom.onChange
 import styled.StyledDOMBuilder
 import styled.css
 import styled.styledDiv
 import styled.styledImg
+import styled.styledInput
+import styled.styledLabel
 
 
 /**
@@ -93,4 +116,57 @@ fun StyledDOMBuilder<*>.column(
         }
         +value
     }
+}
+
+private val camelRegex = "(?<=[a-zA-Z])[A-Z]".toRegex()
+private val snakeRegex = "_[a-zA-Z]".toRegex()
+private val nonAlnumRegex = "[^A-Za-z0-9]".toRegex()
+
+// String extensions
+
+val String.alNum: String
+    get() {
+        return nonAlnumRegex.replace(this, "")
+    }
+
+val String.snakeCase: String
+    get() {
+        return camelRegex.replace(this) {
+            "-${it.value}"
+        }.lowercase()
+    }
+
+val String.camelCase: String
+    get() {
+        return snakeRegex.replace(this) {
+            it.value.replace("_", "")
+                .uppercase()
+        }
+    }
+
+
+/**
+ * Add a checkbox
+ */
+
+fun RBuilder.checkBox(label: String, data: StateVar<Boolean>) {
+    val inputId = label.alNum.snakeCase
+    styledLabel {
+        attrs.set("htmlFor", inputId)       // can't use htmlFor property since it doesn't work for react
+        css {
+            padding(left = 0.25.rem, right = 0.25.rem)
+        }
+        +label
+    }
+    styledInput(InputType.checkBox) {
+        attrs["checked"] = data()           // another work-around for kotlinx react.
+        attrs {
+            id = inputId
+            onChange = { data.value = !data() }
+        }
+        css {
+            margin(left = 1.5.rem)
+        }
+    }
+
 }
