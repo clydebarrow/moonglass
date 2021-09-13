@@ -74,6 +74,17 @@ data class Api(
         val totalSampleFileBytes: Long // 38776002681
     )
 
+    val allStreams: Map<String, Stream>
+        get() {
+            return cameras.map { camera ->
+                camera.streams.map {
+                    Stream(it.key, it.value, camera)
+                }
+            }
+                .flatten()
+                .associateBy { it.key }
+        }
+
     @Serializable
     data class Session(
         val username: String,

@@ -17,42 +17,10 @@
 package org.moonglass.ui.content
 
 import io.ktor.http.ContentType
-import kotlinx.css.Align
-import kotlinx.css.Display
-import kotlinx.css.FlexDirection
-import kotlinx.css.GridColumnEnd
-import kotlinx.css.GridColumnStart
-import kotlinx.css.GridRowEnd
-import kotlinx.css.GridRowStart
-import kotlinx.css.GridTemplateColumns
-import kotlinx.css.GridTemplateRows
-import kotlinx.css.JustifyContent
-import kotlinx.css.JustifyItems
-import kotlinx.css.alignItems
-import kotlinx.css.display
-import kotlinx.css.flexDirection
-import kotlinx.css.gridColumnEnd
-import kotlinx.css.gridColumnStart
-import kotlinx.css.gridRowEnd
-import kotlinx.css.gridRowStart
-import kotlinx.css.gridTemplateColumns
-import kotlinx.css.gridTemplateRows
-import kotlinx.css.height
-import kotlinx.css.justifyContent
-import kotlinx.css.justifyItems
-import kotlinx.css.margin
-import kotlinx.css.padding
-import kotlinx.css.paddingTop
-import kotlinx.css.pct
-import kotlinx.css.rem
-import kotlinx.css.width
-import kotlinx.css.zIndex
+import kotlinx.css.*
+import kotlinx.html.js.onChangeFunction
 import kotlinx.serialization.Serializable
-import org.moonglass.ui.Content
-import org.moonglass.ui.ContentProps
-import org.moonglass.ui.ResponsiveLayout
-import org.moonglass.ui.ZIndex
-import org.moonglass.ui.name
+import org.moonglass.ui.*
 import org.moonglass.ui.utility.SavedState
 import org.moonglass.ui.video.LiveSource
 import org.moonglass.ui.video.Player
@@ -82,7 +50,13 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
         styledSelect {
             attrs {
                 value = state.layoutState.current
-                onChange = { state.layoutState.current = (it.currentTarget as HTMLSelectElement).value }
+                onChangeFunction = {
+                    val value = it.currentTarget.unsafeCast<HTMLSelectElement>().value
+                    console.log("Event = $it value = $value")
+                    applyState {
+                        layoutState.current = value
+                    }
+                }
             }
             state.layoutState.layouts.sortedBy { it.name }.forEach {
                 option {
@@ -113,8 +87,10 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
     }
 
     override fun RBuilder.renderContent() {
+        val allStreams = props.api.allStreams
         styledDiv {
-            state.layoutState.layout.arrangement.let { arrangement ->
+            state.layoutState.layout.let { layout ->
+                val arrangement = layout.arrangement
                 css {
                     justifyContent = JustifyContent.center
                     gridTemplateColumns = GridTemplateColumns((1..arrangement.columns).joinToString(" ") { "1fr" })
@@ -124,10 +100,10 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
                     display = Display.grid
                     zIndex = ZIndex.Content()
                     width = 100.pct
-                    height = 100.pct
+                    maxHeight = 100.pct
                     paddingTop = ResponsiveLayout.navBarEmHeight
                 }
-                name = "RecordingsContent"
+                name = "playersContent"
                 repeat(arrangement.totalPlayers) { index ->
                     styledDiv {
                         css {
@@ -136,6 +112,7 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
                             justifyItems = JustifyItems.center
                             width = 100.pct
                             height = 100.pct
+                            padding(0.5.rem)
                             if (index == 0 && arrangement.feature) {
                                 gridColumnStart = GridColumnStart("1")
                                 gridColumnEnd = GridColumnEnd("${arrangement.columns - 1}")
@@ -143,16 +120,37 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
                                 gridRowEnd = GridRowEnd("${arrangement.rows - 1}")
                             }
                         }
+                        val sourceKey = layout.sources[index]
+                        val stream = allStreams[sourceKey]
                         styledSelect {
-                            
-
+                            attrs {
+                                value = sourceKey
+                                onChangeFunction = {
+                                    val value = it.currentTarget.unsafeCast<HTMLSelectElement>().value
+                                    applyState {
+                                        layoutState.layout.sources[index] = value
+                                    }
+                                }
+                            }
+                            option {
+                                attrs {
+                                    value = ""
+                                }
+                                +"Select stream"
+                            }
+                            allStreams.forEach {
+                                option {
+                                    attrs {
+                                        value = it.key
+                                    }
+                                    +it.value.toString()
+                                }
+                            }
                         }
-                        val sourceKey = state.layoutState.layouts[index].key
-                        val stream = props.api.streamFor(sourceKey)
 
                         child(Player::class) {
                             attrs {
-                                if(stream != null)
+                                if (stream != null)
                                     source = LiveSource(stream.wsUrl, stream.toString())
                             }
                         }
@@ -164,19 +162,19 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
 
     @Serializable
     enum class Arrangement(val title: String, val columns: Int, val rows: Int, val feature: Boolean = false) {
-        Single("Single", 1, 2),
+        Single("Single", 1, 1),
         L1x2("1x2", 1, 2),
         L2x2("2x2", 2, 2),
         L2x3("2x3", 2, 3),
         L1x4("1x4", 1, 4),
         L1p5("1+5", 3, 3, true);
 
-        val layout: Layout get() = Layout(title, "_$name", this, listOf())
+        val layout: Layout get() = Layout(title, "_$name", this, MutableList(totalPlayers) { "" })
         val totalPlayers: Int get() = if (feature) rows + columns else rows * columns
     }
 
     @Serializable
-    data class Layout(val name: String, val key: String, val arrangement: Arrangement, val sources: List<String>)
+    data class Layout(val name: String, val key: String, val arrangement: Arrangement, val sources: MutableList<String>)
 
     @Serializable
     data class LayoutState(

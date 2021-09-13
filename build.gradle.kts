@@ -44,8 +44,6 @@ open class PropertiesFile(private val file: File) {
 
 val localProperties get() = PropertiesFile(File("local.properties"))
 
-// defaults to true
-
 kotlin {
     js(IR) {
         binaries.executable()

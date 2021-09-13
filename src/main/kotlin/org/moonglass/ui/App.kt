@@ -27,13 +27,13 @@ import kotlinx.css.display
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
 import kotlinx.css.height
-import kotlinx.css.pct
 import kotlinx.css.position
 import kotlinx.css.vh
 import kotlinx.css.vw
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import org.moonglass.ui.api.Api
+import org.moonglass.ui.utility.SavedState
 import org.moonglass.ui.utility.StateVar
 import org.moonglass.ui.widgets.Dialog
 import org.moonglass.ui.widgets.Spinner
@@ -60,19 +60,33 @@ external interface AppState : State {
 @JsExport
 class App() : RComponent<Props, AppState>() {
 
+    private fun restoreShowing(): MainMenu.MainMenuItem {
+        val old: String? = SavedState.restore(appComponentKey)
+        return old?.let { MainMenu.getItem(it)} ?: MainMenu.default
+    }
     override fun AppState.init() {
         instance = this@App
         refreshing = mutableSetOf()
-        contentShowing = MainMenu.menu.first().items.first()
+        contentShowing = restoreShowing()
         isSideBarShowing = StateVar(false, this@App)
         api = Api()
         refreshList()
     }
 
     override fun componentDidMount() {
+        SavedState.addOnUnload(::saveMyStuff)
         window.addEventListener("resize", {
             forceUpdate()
         })
+    }
+
+    override fun componentWillUnmount() {
+        saveMyStuff()
+        SavedState.removeOnUnload(::saveMyStuff)
+    }
+
+    private fun saveMyStuff() {
+        SavedState.save(appComponentKey, state.contentShowing.menuId)
     }
 
     private fun refreshList() {
@@ -86,7 +100,6 @@ class App() : RComponent<Props, AppState>() {
     }
 
     override fun RBuilder.render() {
-
         styledDiv {
             css {
                 position = Position.relative
@@ -132,6 +145,7 @@ class App() : RComponent<Props, AppState>() {
         var instance: App? = null
 
 
+        const val appComponentKey = "appComponentKey"
         // get the current camera list
 
         val session: Api.Session?

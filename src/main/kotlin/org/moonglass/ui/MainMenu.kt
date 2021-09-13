@@ -24,7 +24,7 @@ import kotlin.reflect.KClass
 object MainMenu {
 
     private fun onSelected(id: String) {
-        items[id]?.let {
+        getItem(id)?.let {
             App.showContent(it)
         }
     }
@@ -75,4 +75,10 @@ object MainMenu {
     )
 
     private val items = menu.map { it.items }.flatten().map { it.menuId to it }.toMap()
+
+    val default get() = menu.first().items.first()
+
+    fun getItem(id: String): MainMenuItem? {
+        return items[id]
+    }
 }
