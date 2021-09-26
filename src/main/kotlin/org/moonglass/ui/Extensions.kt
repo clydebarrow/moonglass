@@ -128,7 +128,6 @@ data class HttpException(val status: Int, val response: String) : Exception("Htt
 fun String.url(params: Map<String, Any?>): String {
     return if (params.isNotEmpty()) {
         "$this?" + params.map {
-            //console.log("Map entry ${it.key} to ${it.value}")
             if (it.value != null)
                 encodeURIComponent(it.key) + "=" + encodeURIComponent(it.value.toString())
             else
@@ -153,7 +152,7 @@ suspend inline fun <reified T : Any> String.fetch(
 // give a card style to a thing
 fun StyledDOMBuilder<*>.cardStyle() {
     css {
-        backgroundColor = Color.white
+        backgroundColor = Theme().content.backgroundColor
         borderRadius = 0.4.rem
         display = Display.flex
         margin(0.5.rem)

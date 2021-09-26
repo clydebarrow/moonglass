@@ -16,30 +16,67 @@
 
 package org.moonglass.ui.content
 
-import io.ktor.http.ContentType
-import kotlinx.css.*
+import kotlinx.css.Align
+import kotlinx.css.Display
+import kotlinx.css.FlexDirection
+import kotlinx.css.GridColumnEnd
+import kotlinx.css.GridColumnStart
+import kotlinx.css.GridRowEnd
+import kotlinx.css.GridRowStart
+import kotlinx.css.GridTemplateColumns
+import kotlinx.css.GridTemplateRows
+import kotlinx.css.JustifyContent
+import kotlinx.css.TextAlign
+import kotlinx.css.alignContent
+import kotlinx.css.backgroundColor
+import kotlinx.css.display
+import kotlinx.css.flexDirection
+import kotlinx.css.gridColumnEnd
+import kotlinx.css.gridColumnStart
+import kotlinx.css.gridRowEnd
+import kotlinx.css.gridRowStart
+import kotlinx.css.gridTemplateColumns
+import kotlinx.css.gridTemplateRows
+import kotlinx.css.justifyContent
+import kotlinx.css.margin
+import kotlinx.css.maxHeight
+import kotlinx.css.maxWidth
+import kotlinx.css.padding
+import kotlinx.css.paddingTop
+import kotlinx.css.pct
+import kotlinx.css.rem
+import kotlinx.css.textAlign
+import kotlinx.css.width
+import kotlinx.css.zIndex
 import kotlinx.html.js.onChangeFunction
 import kotlinx.serialization.Serializable
-import org.moonglass.ui.*
+import org.moonglass.ui.Content
+import org.moonglass.ui.ContentProps
+import org.moonglass.ui.ResponsiveLayout
+import org.moonglass.ui.Theme
+import org.moonglass.ui.ZIndex
+import org.moonglass.ui.applyState
+import org.moonglass.ui.name
 import org.moonglass.ui.utility.SavedState
-import org.moonglass.ui.video.LiveSource
-import org.moonglass.ui.video.Player
-import org.moonglass.ui.video.VideoSource
-import org.moonglass.ui.widgets.recordings.Stream
-import org.moonglass.ui.widgets.recordings.streamFor
+import org.moonglass.ui.video.LivePlayer
+import org.moonglass.ui.video.LiveSourceFactory
 import org.w3c.dom.HTMLSelectElement
 import react.RBuilder
 import react.State
 import react.dom.attrs
-import react.dom.onChange
 import react.dom.option
 import styled.css
 import styled.styledDiv
-import styled.styledOption
 import styled.styledSelect
 
 
+/**
+ * Display a tiled view of multiple live sources.
+ */
 class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props) {
+
+    // a cache of sources to avoid recreating these on render.
+
     override fun RBuilder.renderNavBarWidget() {
         styledDiv {
             +"Layout:"
@@ -52,7 +89,6 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
                 value = state.layoutState.current
                 onChangeFunction = {
                     val value = it.currentTarget.unsafeCast<HTMLSelectElement>().value
-                    console.log("Event = $it value = $value")
                     applyState {
                         layoutState.current = value
                     }
@@ -91,13 +127,14 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
         styledDiv {
             state.layoutState.layout.let { layout ->
                 val arrangement = layout.arrangement
+                val vFrac = (100.0 / arrangement.rows).pct
+                val hFrac = (100.0 / arrangement.columns).pct
                 css {
                     justifyContent = JustifyContent.center
-                    gridTemplateColumns = GridTemplateColumns((1..arrangement.columns).joinToString(" ") { "1fr" })
-                    gridTemplateRows = GridTemplateRows((1..arrangement.rows).joinToString(" ") { "1fr" })
-                    alignItems = Align.center
-                    padding(0.25.rem)
+                    gridTemplateRows = GridTemplateRows((1..arrangement.rows).map { vFrac }.joinToString(" "))
+                    gridTemplateColumns = GridTemplateColumns((1..arrangement.columns).map { hFrac }.joinToString(" "))
                     display = Display.grid
+                    padding(0.25.rem)
                     zIndex = ZIndex.Content()
                     width = 100.pct
                     maxHeight = 100.pct
@@ -107,22 +144,27 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
                 repeat(arrangement.totalPlayers) { index ->
                     styledDiv {
                         css {
+                            maxHeight = 100.pct
+                            maxWidth = 100.pct
                             display = Display.flex
                             flexDirection = FlexDirection.column
-                            justifyItems = JustifyItems.center
-                            width = 100.pct
-                            height = 100.pct
+                            alignContent = Align.center
                             padding(0.5.rem)
                             if (index == 0 && arrangement.feature) {
                                 gridColumnStart = GridColumnStart("1")
-                                gridColumnEnd = GridColumnEnd("${arrangement.columns - 1}")
+                                gridColumnEnd = GridColumnEnd("${arrangement.columns}")
                                 gridRowStart = GridRowStart("1")
-                                gridRowEnd = GridRowEnd("${arrangement.rows - 1}")
+                                gridRowEnd = GridRowEnd("${arrangement.rows}")
                             }
                         }
                         val sourceKey = layout.sources[index]
                         val stream = allStreams[sourceKey]
                         styledSelect {
+                            css {
+                                textAlign = TextAlign.center
+                                backgroundColor = Theme().header.backgroundColor
+                                padding(0.5.rem)
+                            }
                             attrs {
                                 value = sourceKey
                                 onChangeFunction = {
@@ -148,10 +190,11 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
                             }
                         }
 
-                        child(Player::class) {
+                        child(LivePlayer::class) {
                             attrs {
-                                if (stream != null)
-                                    source = LiveSource(stream.wsUrl, stream.toString())
+                                playerKey = "live-player-$index"
+                                source = stream?.let { LiveSourceFactory.getSource(it) }
+                                showControls = true
                             }
                         }
                     }

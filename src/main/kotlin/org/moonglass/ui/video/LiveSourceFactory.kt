@@ -16,6 +16,15 @@
 
 package org.moonglass.ui.video
 
-interface VideoSource {
-    val caption: String
+import org.moonglass.ui.widgets.recordings.Stream
+
+object LiveSourceFactory {
+
+    private val sourceCache = mutableMapOf<String, LiveSource>()
+
+    fun getSource(stream: Stream): LiveSource {
+        return sourceCache.getOrPut(stream.key) {
+            LiveSource(stream)
+        }
+    }
 }

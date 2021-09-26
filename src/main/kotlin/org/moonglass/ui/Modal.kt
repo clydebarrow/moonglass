@@ -53,7 +53,7 @@ abstract class Modal<S : State>(props: ModalProps) : RComponent<ModalProps, S>(p
     override fun RBuilder.render() {
         dismisser({ if (dismissOutside) props.doDismiss() }) {
             css {
-                backgroundColor = Color("#00000030")    // darkish overlay
+                backgroundColor = Theme().overlay
             }
             styledDiv {
                 // ensure clicking inside the dialog does not dismiss it.

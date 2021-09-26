@@ -20,79 +20,76 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.js.Js
 import io.ktor.client.features.HttpTimeout
 import io.ktor.client.features.timeout
+import io.ktor.client.features.websocket.DefaultClientWebSocketSession
 import io.ktor.client.features.websocket.WebSockets
 import io.ktor.client.features.websocket.webSocket
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
 import io.ktor.client.request.url
 import io.ktor.client.statement.HttpResponse
-import io.ktor.http.Url
-import io.ktor.http.cio.websocket.Frame
-import io.ktor.http.cio.websocket.WebSocketSession
-import io.ktor.http.cio.websocket.close
 import io.ktor.utils.io.core.readBytes
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import org.khronos.webgl.Uint8Array
 import org.moonglass.ui.Duration90k
 import org.moonglass.ui.Time90k
 import org.moonglass.ui.api.apiConfig
 import org.moonglass.ui.widgets.Toast
-import org.w3c.dom.mediasource.AppendMode
+import org.moonglass.ui.widgets.recordings.Stream
 import org.w3c.dom.mediasource.MediaSource
-import org.w3c.dom.mediasource.OPEN
-import org.w3c.dom.mediasource.ReadyState
-import org.w3c.dom.mediasource.SEGMENTS
-import org.w3c.dom.mediasource.SourceBuffer
-import org.w3c.dom.url.URL
 import kotlin.collections.set
 
 
 /**
  * A class that receives data from a websocket and streams it into a mediasource.
- * @param wsUrl The websocket url
- * @param caption The video title
+ * @param stream The stream to use
  *
  */
-class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSource {
+class LiveSource(private val stream: Stream) : VideoSource {
 
-    /**
-     * The mediasource that buffers the stream
-     */
-    private val mediaSource: MediaSource = MediaSource().apply {
-        // attach event listeners
-        onsourceended = {
-            console.log("MediaSource ended: ${it.type}")
-        }
-        onsourceclose = {
-            console.log("MediaSource closed: ${it.type}")
-        }
-        onsourceopen = {
-            start()
-        }
-    }
+    override val caption: String = stream.toString()
 
-    /**
-     * A source url suitable for assignment to a video element's src property
-     */
-    override val srcUrl: String = URL.createObjectURL(mediaSource)
-
-    private lateinit var srcBuffer: SourceBuffer
 
     /**
      * The coroutine scope used to run tasks.
      */
     private val scope = MainScope()
 
-
     /**
-     * A buffer queue to be sent to the media source
+     * Cache the initialization segment
      */
 
-    private val bufferQueue = ArrayDeque<DataHeaders>()
+    private lateinit var initSegment: Data
+
+    /**
+     * The class used to deliver data
+     */
+    open class Data(val contentType: String, val data: ByteArray)
+
+    private val flow = MutableSharedFlow<Data>(0, MAX_BUFFER, BufferOverflow.DROP_LATEST).also {
+        it.onSubscription {
+            console.log("$caption: subscribed to flow")
+        }
+    }
+
+    /**
+     * Publicly accessible flow.
+     */
+
+    val dataFlow: SharedFlow<Data>
+        get() = flow.onSubscription {
+            console.log("$caption: subscribed to dataFlow")
+            if (::initSegment.isInitialized)
+                emit(initSegment)
+        }
 
     /**
      * The client we will use for the websocket and other network fetches
@@ -103,147 +100,88 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
         install(HttpTimeout)
     }
 
-    /**
-     * Fetch the initialization segment for a stream
-     */
-
-    private suspend fun getInitializationSegment(id: Int): ByteArray {
-        val url = HttpRequestBuilder().apply {
-            timeout { requestTimeoutMillis = 10000 }
+    private suspend fun readSocket(block: suspend DefaultClientWebSocketSession.() -> Unit) {
+        client.webSocket({
             url {
-                apiConfig("init", "$id.mp4")
+                url(stream.wsUrl)
             }
-        }
-        return client.get<HttpResponse>(url).content.readRemaining(100000, 0).readBytes()
+        }, block)
     }
-
-    private val SourceBuffer.timeRange: Pair<Double, Double>
-        get() {
-            val ranges = buffered
-            val length = ranges.length
-            val rangeEnd = if (length == 0) 0.0 else ranges.end(length - 1)
-            val rangeStart = if (length == 0) 0.0 else ranges.start(0)
-            return Pair(rangeStart, rangeEnd)
-        }
 
     /**
-     * If a sourcebuffer exceeds the given value, trim it to somewhat less
+     * Fetch the initialization segment for the stream. Do this by opening the websocket and reading one packet
+     * just to get the sampleId.
      */
-    private fun SourceBuffer.trimTo(seconds: Int, hysteresis: Double = 0.5): Boolean {
-        val range = timeRange
-        if (range.second - range.first > seconds) {
-            console.log("time range ${range.first}-${range.second}, removing some")
-            remove(range.first, range.second - (seconds * hysteresis))
-            return true
-        }
-        return false
-    }
 
-    // called to transfer data into the SourceBuffer
-    private fun transfer() {
-        if (!srcBuffer.updating) {
-            if (!srcBuffer.trimTo(MAX_TIME))
-                bufferQueue.removeFirstOrNull()?.let { data ->
-                    val range = srcBuffer.timeRange
-                    srcBuffer.timestampOffset = range.second
-                    mediaSource.setLiveSeekableRange(
-                        (range.second - MAX_TIME - 60).coerceAtLeast(range.first),
-                        range.second
-                    )
-                    srcBuffer.appendBuffer(data.data)
+    private suspend fun getInitializationSegment(): Data {
+        if (!::initSegment.isInitialized) {
+            readSocket {
+                val message = incoming.receive()
+                val buffer = ByteBuffer(message.data)
+                val data = buffer.parseBuffer()
+                if (!MediaSource.isTypeSupported(data.contentType)) {
+                    Toast.toast("Media type ${data.contentType} not supported")
+                    throw IllegalArgumentException("Media type not supported")
                 }
+                this.cancel()
+                // got the header, now request the init segment
+                val url = HttpRequestBuilder().apply {
+                    timeout { requestTimeoutMillis = 10000 }
+                    url {
+                        apiConfig("init", "${data.sampleId}.mp4")
+                    }
+                }
+                initSegment =
+                    Data(
+                        data.contentType,
+                        client.get<HttpResponse>(url).content.readRemaining(100000, 0).readBytes()
+                    )
+            }
         }
+        return initSegment
     }
 
-    private suspend fun WebSocketSession.setup() {
-        val message = incoming.receive() as Frame.Binary
-        val buffer = ByteBuffer(message.data)
-        val data = buffer.parseBuffer()
-        if (!MediaSource.isTypeSupported(data.contentType)) {
-            Toast.toast("Media type ${data.contentType} not supported")
-            throw IllegalArgumentException("Media type not supported")
-        }
-        if (!::srcBuffer.isInitialized) {
-            srcBuffer = mediaSource.addSourceBuffer(data.contentType)
-            srcBuffer.mode = AppendMode.SEGMENTS
-            srcBuffer.onerror = {
-                console.log("Mediasource error: ${it.type}")
-            }
-            srcBuffer.onabort = {
-                console.log("Mediasource abort: ${it.type}")
-            }
-            srcBuffer.onupdateend = {
-                transfer()
-            }
-        }
-        bufferQueue.add(data)
-        srcBuffer.appendBuffer(getInitializationSegment(data.sampleId))     // starts the transfer callbacks
-    }
 
     private var job: Job? = null
+
     /**
      * open the websocket and start streaming data
      */
-    private fun start() {
-        job = scope.launch {
-            client.webSocket({
-                url {
-                    url(wsUrl)
-                }
-            }) {
-                try {
-                    setup()
-                    while (isActive && mediaSource.readyState == ReadyState.OPEN) {
-                        val message = incoming.receive() as Frame.Binary
-                        val data = ByteBuffer(message.data).parseBuffer()
-                        if (bufferQueue.size < MAX_BUFFER) {
-                            bufferQueue.add(data)
-                            transfer()
-                        } else
-                            console.log("Discarded buffer: Size =${bufferQueue.size}, timeRange=${srcBuffer.timeRange} ")
+    private fun open() {
+        if (job == null)
+            job = scope.launch {
+                flow.emit(getInitializationSegment())
+                readSocket {
+                    try {
+                        while (isActive) {
+                            val message = incoming.receive()
+                            val buffer = ByteBuffer(message.data)
+                            val data = buffer.parseBuffer()
+                            flow.emit(Data(data.contentType, data.data))
+                        }
+                    } catch (ex: Exception) {
+                        console.log("$caption: $ex")
                     }
-                } catch (ex: Exception) {
-                    console.log("$ex")
-                } finally {
-                    console.log("Ended websocket for $srcUrl, mediaSource.state = ${mediaSource.readyState}")
-                    bufferQueue.clear()
-                    srcBuffer.trimTo(0)
                 }
             }
-        }
-    }
-
-
-    override fun pause() {
-        job?.cancel()
-    }
-
-    override fun play() {
-        if(job?.isActive != true)
-            start()
     }
 
     /**
      * End the streaming.
      */
-    override fun close() {
+    private fun close() {
         try {
-            console.log("Closing LiveSource, mediaState = ${mediaSource.readyState}")
-            if (mediaSource.readyState == ReadyState.OPEN) {
-                mediaSource.removeSourceBuffer(srcBuffer)
-                mediaSource.endOfStream()
-            }
             job?.cancel()
-            scope.cancel()
+            job = null
         } catch (ex: Exception) {
-            console.log("Exception in close: ${ex.message}")
+            console.log("$caption: Exception in close: ${ex.message}")
         }
     }
 
     private class ByteBuffer(val data: ByteArray) {
         var offset = 0
         val size = data.size
-        val balance get() = Uint8Array(data.drop(offset).toTypedArray())
+        val balance get() = data.drop(offset).toByteArray()
 
         fun indexOf(c: Char): Int {
             var i = offset
@@ -277,8 +215,23 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
         }
     }
 
-    private data class DataHeaders(
-        val contentType: String,
+    private var clientCount: Int = 0
+
+    init {
+        // listen for changes in subscriber count, open/close the websocket as required.
+        flow.subscriptionCount.onEach {
+            if (it > clientCount)
+                close()     // force restart of stream
+            if (it == 0)
+                close()
+            else
+                open()
+            clientCount = it
+        }.launchIn(scope)
+    }
+
+    private class DataHeaders(
+        contentType: String,
         val openId: Int,
         val recordingId: Int,
         val recordingStart: Time90k,
@@ -286,8 +239,8 @@ class LiveSource(private val wsUrl: Url, override val caption: String) : VideoSo
         val rangeStart: Duration90k,
         val rangeEnd: Duration90k,
         val sampleId: Int,
-        val data: Uint8Array
-    ) {
+        data: ByteArray
+    ) : Data(contentType, data) {
         override fun toString(): String {
             return "DataHeaders(contentType='$contentType', openId=$openId, recordingId=$recordingId, recordingStart=$recordingStart, prevDuration=$prevDuration, rangeStart=$rangeStart, rangeEnd=$rangeEnd, sampleId=$sampleId)"
         }

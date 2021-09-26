@@ -56,6 +56,7 @@ import kotlinx.html.DIV
 import kotlinx.html.js.onClickFunction
 import kotlinx.html.js.onFocusFunction
 import kotlinx.html.tabIndex
+import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.applyState
 import org.moonglass.ui.dismisser
@@ -296,7 +297,7 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
                 //fontSize = 1.5.rem
                 backgroundColor = Color.transparent
                 focus {
-                    backgroundColor = Color.lightBlue
+                    backgroundColor = Theme().header.backgroundColor
                 }
             }
             +value
@@ -315,9 +316,9 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
                 padding(0.px)
                 display = Display.flex
                 cursor = Cursor.pointer
-                color = Color.gray
+                color = Theme().content.textColor
                 active {
-                    color = Color.royalBlue
+                    color = Theme().selectedBorderColor
                 }
                 if (!up)
                     transform {
@@ -368,8 +369,8 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
                 onClickFunction = { clockProps.onSelect((it.getRadial() * range).roundToInt()) }
             }
             css {
-                backgroundColor = Color.lightCyan
-                borderColor = Color.black
+                backgroundColor = Theme().header.backgroundColor
+                borderColor = Theme().header.textColor
                 borderWidth = 1.px
                 borderRadius = clockRadius.px
                 padding(3.px)
@@ -391,7 +392,7 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
                     translate(width / 2, height / 2)
                     textAlign = CanvasTextAlign.CENTER
                     textBaseline = CanvasTextBaseline.MIDDLE
-                    fillStyle = Color.black
+                    fillStyle = Theme().content.textColor
                     val textSize = height / 16.0
                     font = "normal ${textSize}px sans-serif"
 
@@ -401,7 +402,7 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
                     }
 
                     lineWidth = 4.0
-                    strokeStyle = Color.black
+                    strokeStyle = Theme().content.textColor
                     hand(clockProps.value.toDouble() / range, height / 2 - textSize * 2)
                 }
             }

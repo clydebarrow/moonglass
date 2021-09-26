@@ -56,6 +56,7 @@ import kotlinx.html.js.onClickFunction
 import kotlinx.serialization.Serializable
 import org.moonglass.ui.Modal
 import org.moonglass.ui.ModalProps
+import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.cardStyle
 import org.moonglass.ui.name
@@ -105,7 +106,6 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
         items.associate { it.key to it.defaultValue }.toMutableMap().also { data ->
             try {
                 SavedState.restore<SavedData>(saveKey)?.let { savedData ->
-                    console.log("Restored data $savedData")
                     data.filter { it.value.isBlank() }.map { it.key }.forEach { key ->
                         savedData.data[key]?.let { data[key] = it }
                     }
@@ -123,13 +123,7 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
             inputData[key] = value
         }
 
-    override fun DialogState.init(props: ModalProps) {
-        console.log("Dialog init")
-        // restore any previously entered data that does not have a default value
-    }
-
     override fun componentWillUnmount() {
-        console.log("Saving data $inputData")
         SavedState.save(saveKey, cleanData())
     }
 
@@ -179,7 +173,7 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
             // header
             styledDiv {
                 css {
-                    backgroundColor = headerBackground
+                    backgroundColor = Theme().header.backgroundColor
                     fontWeight = FontWeight.bold
                     justifyContent = JustifyContent.center
                     textAlign = TextAlign.center
@@ -215,7 +209,7 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
                             width = LinearDimension.fillAvailable
                             padding(0.5.rem)
                             borderWidth = 1.px
-                            borderColor = Color.lightGray
+                            borderColor = Theme().borderColor
                             borderRadius = 0.1.rem
                             margin(bottom = 0.2.rem, right = 0.5.rem)
                         }
@@ -255,15 +249,17 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
                     disabled = true
             }
             css {
+                Theme().apply {
+                    backgroundColor = if (text == cancelText) button.backgroundColor else button.selectedBackgroundColor
+                    this@css.borderColor = borderColor
+                    disabled {
+                        backgroundColor = button.disabledBackgroundColor
+                    }
+                }
                 display = Display.flex
                 flexGrow = 1.0
-                backgroundColor = if (text == cancelText) cancelButtonBackground else buttonBackground
-                disabled {
-                    backgroundColor = disabledBackground
-                }
                 borderRadius = 8.px
                 borderWidth = 1.px
-                borderColor = Color.gray
                 boxShadow(rgba(0, 0, 0, 0.1), 0.px, 8.px, 15.px)
                 justifyContent = JustifyContent.center
                 alignContent = Align.center
@@ -281,19 +277,8 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
         return SavedData(inputData.filterKeys { (it in passwords) })
     }
 
-    companion object {
-        val buttonBackground = Color("#e0e0ff")
-        val cancelButtonBackground = Color("#ffe0e0")
-        val disabledBackground = Color("#f0f0f0")
-        val headerBackground = Color("#f0f0f0")
-    }
-
     @Serializable
-    private data class SavedData(val data: Map<String, String>) {
-        companion object {
-        }
-    }
-
+    private data class SavedData(val data: Map<String, String>)
 }
 
 external interface DialogState : State {

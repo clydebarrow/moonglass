@@ -95,9 +95,9 @@ class SideBar : RComponent<SideBarProps, State>() {
                 overflow = Overflow.hidden
                 borderRightWidth = 1.px
                 borderStyle = BorderStyle.solid
-                borderColor = Color.grey
+                borderColor = Theme().borderColor
                 zIndex = ZIndex.SideBar()
-                backgroundColor = Color.white
+                backgroundColor = Theme().content.backgroundColor
                 transition("all", 0.3.s)
             }
             child(Menu::class) {
@@ -120,7 +120,7 @@ class SideBar : RComponent<SideBarProps, State>() {
                 display = Display.flex
                 flexDirection = FlexDirection.column
                 flexWrap = FlexWrap.wrap
-                backgroundColor = Color.white
+                backgroundColor = Theme().content.backgroundColor
                 padding = Media.padding(6)
             }
         }

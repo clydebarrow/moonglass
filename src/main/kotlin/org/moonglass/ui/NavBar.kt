@@ -113,7 +113,7 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                 classes.add("left-anchor")      // can't apply transform-origin here apparently
                 position = Position.relative
                 height = 20.pct
-                backgroundColor = Color.darkSlateGray
+                backgroundColor = Theme().content.textColor
                 top = 20.pct * n * 2
                 left = 0.px
                 right = 0.px
@@ -133,10 +133,10 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                 flexWrap = FlexWrap.wrap
                 alignItems = Align.center
 
-                backgroundColor = Color.white
+                backgroundColor = Theme().content.backgroundColor
                 padding(0.5.rem)
                 borderBottomWidth = 1.px
-                borderColor = Color.lightGray
+                borderColor = Theme().borderColor
 
                 // keep at top of window
                 position = Position.fixed

@@ -42,13 +42,14 @@ import kotlin.time.Duration
 @Serializable
 data class Api(
     val cameras: List<Camera> = listOf(),
-    val signalTypes: List<String> = listOf(),
     val session: Session? = null,
-    val signals: List<String> = listOf(),
+    val signals: List<Signal> = listOf(),
+    val signalTypes: List<SignalType> = listOf(),
     val timeZoneName: String = ""// Australia/Sydney
 ) {
     @Serializable
     data class Camera(
+        val id: Int = 0,
         val description: String, // Hikvision Driveway Camera
         val shortName: String, // Driveway
         val streams: Map<String, StreamData>,
@@ -64,6 +65,7 @@ data class Api(
 
     @Serializable
     data class StreamData(
+        val id: Int = 0,
         val days: Map<String, Day> = mapOf(),
         val fsBytes: Long, // 38785380352
         val maxEndTime90k: Long, // 146704410690765

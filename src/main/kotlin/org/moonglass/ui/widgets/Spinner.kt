@@ -42,6 +42,7 @@ import kotlinx.css.top
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import kotlinx.html.role
+import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
 import react.Props
 import react.RBuilder
@@ -69,7 +70,7 @@ class Spinner : RComponent<Props, State>() {
                     height = 7.rem
                     borderWidth = 0.25.rem
                     borderStyle = BorderStyle.solid
-                    borderColor = Color.teal
+                    borderColor = Theme().button.backgroundColor
                     borderRightColor = Color.transparent
                     borderRadius = 50.pct
                     animation(duration = 0.75.s, timing = Timing.linear, iterationCount = IterationCount.infinite) {

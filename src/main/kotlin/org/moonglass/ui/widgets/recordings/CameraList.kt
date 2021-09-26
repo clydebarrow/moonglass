@@ -17,7 +17,6 @@
 package org.moonglass.ui.widgets.recordings
 
 import kotlinx.css.Align
-import kotlinx.css.Color
 import kotlinx.css.Cursor
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
@@ -51,6 +50,7 @@ import kotlinx.css.textAlign
 import kotlinx.css.width
 import kotlinx.html.DIV
 import kotlinx.html.js.onClickFunction
+import org.moonglass.ui.Theme
 import org.moonglass.ui.Time90k
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.api.RecList
@@ -68,6 +68,7 @@ import org.moonglass.ui.style.shrinkable
 import org.moonglass.ui.toDuration
 import org.moonglass.ui.tooltip
 import org.moonglass.ui.video.LiveSource
+import org.moonglass.ui.video.LiveSourceFactory
 import org.moonglass.ui.video.RecordingSource
 import org.moonglass.ui.video.VideoSource
 import react.Props
@@ -99,13 +100,13 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                 display = Display.flex
                 flexDirection = FlexDirection.row
                 justifyContent = JustifyContent.spaceBetween
-                backgroundColor = cameraColor
+                backgroundColor = Theme().header.backgroundColor
             }
             styledDiv {
                 css {
                     display = Display.flex
                     flexGrow = 0.3
-                    color = Color.black
+                    color = Theme().header.textColor
                     fontWeight = bolder
                     padding(left = 1.rem, right = 0.5.rem)
                 }
@@ -115,7 +116,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                 css {
                     display = Display.flex
                     flexGrow = 0.7
-                    color = Color.black
+                    color = Theme().header.textColor
                     textAlign = TextAlign.right
                     justifyContent = JustifyContent.center
                     padding(left = 1.rem, right = 0.5.rem)
@@ -125,7 +126,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
         }
     }
 
-    // get the reclist for a given stream (by key)
+    // get the recList for a given stream (by key)
     private val Stream.recList get() = props.recLists[key] ?: RecList()
 
     // construct a line describing a stream.
@@ -140,10 +141,10 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
             css {
                 display = Display.flex
                 flexDirection = FlexDirection.row
-                backgroundColor = streamColor
+                backgroundColor = Theme().subHeader.backgroundColor
                 alignContent = Align.center
                 padding(left = 1.rem, right = 6.px)
-                color = Color.black
+                color = Theme().subHeader.textColor
                 flexWrap = FlexWrap.wrap
             }
             // show expanded state
@@ -180,12 +181,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                         onClickFunction = {
                             it.preventDefault()
                             it.stopPropagation()
-                            props.showVideo(
-                                LiveSource(
-                                    stream.wsUrl,
-                                    "Live: ${stream.camera.shortName} (${stream.name})"
-                                )
-                            )
+                            props.showLive(LiveSourceFactory.getSource(stream))
                         }
                 }
                 css {
@@ -215,7 +211,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                     val bitfrac = ((recording.bitrate - bitwhole.toDouble()) * 10).roundToInt()
                     tooltip = "$resolution ${recording.fps}fps ${recording.storage} $bitwhole.$bitfrac Mbps"
                     attrs {
-                        onClickFunction = { props.showVideo(RecordingSource(stream, recording, props.subTitle)) }
+                        onClickFunction = { props.showRecording(RecordingSource(stream, recording, props.subTitle)) }
                     }
                     css {
                         position = Position.relative    // required to make tooltip work.
@@ -223,11 +219,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                         flexDirection = FlexDirection.row
                         justifyContent = JustifyContent.spaceBetween
                         if (props.playingRecording == recording)
-                            backgroundColor = Color.lightSalmon
-                        else
-                            hover {
-                                backgroundColor = Color("#F0F0F0)")
-                            }
+                            backgroundColor = Theme().subHeader.selectedBackgroundColor
                     }
                     with(recording) {
                         column(getStartDate(props.minStart), 0.30, JustifyContent.start)
@@ -272,11 +264,6 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
             }
         }
     }
-
-    companion object {
-        val cameraColor = Color.lightBlue
-        val streamColor = cameraColor.lighten(20)
-    }
 }
 
 external interface CameraListState : State
@@ -292,6 +279,7 @@ external interface CameraListProps : Props {
 
     // callbacks
     var toggleStream: (String) -> Unit
-    var showVideo: (VideoSource) -> Unit
+    var showRecording: (RecordingSource) -> Unit
+    var showLive: (LiveSource) -> Unit
 }
 

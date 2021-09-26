@@ -20,7 +20,6 @@ import kotlinx.browser.window
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.css.Align
-import kotlinx.css.Color
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.FlexWrap
@@ -60,10 +59,10 @@ import kotlinx.css.textAlign
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import kotlinx.serialization.Serializable
-import org.moonglass.ui.App
 import org.moonglass.ui.Content
 import org.moonglass.ui.ContentProps
 import org.moonglass.ui.ResponsiveLayout
+import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.api.RecList
@@ -75,16 +74,15 @@ import org.moonglass.ui.plusSeconds
 import org.moonglass.ui.utility.SavedState
 import org.moonglass.ui.utility.StateVar
 import org.moonglass.ui.utility.StateVar.Companion.createValue
+import org.moonglass.ui.video.LivePlayer
+import org.moonglass.ui.video.LiveSource
 import org.moonglass.ui.video.Player
 import org.moonglass.ui.video.RecordingSource
-import org.moonglass.ui.video.VideoSource
 import org.moonglass.ui.widgets.recordings.CameraList
 import org.moonglass.ui.widgets.recordings.DateTimeSelector
 import org.moonglass.ui.widgets.recordings.Stream
 import org.moonglass.ui.withTime
-import react.Props
 import react.RBuilder
-import react.RComponent
 import react.State
 import styled.css
 import styled.styledDiv
@@ -105,7 +103,8 @@ external interface RecordingsState : State {
     var subTitle: StateVar<Boolean>
     var expanded: StateVar<Boolean>
 
-    var videoSource: VideoSource?
+    var recordingSource: RecordingSource?
+    var liveSource: LiveSource?
 }
 
 val RecordingsState.startDateTime: Date
@@ -153,7 +152,6 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
     private val RecordingsState.allStreams get() = cameras.values.flatten()
 
     private fun saveMyStuff() {
-        console.log("Saving expanded state ${state.expanded()}")
         SavedState.save(
             saveKey,
             SavedRecordingState.from(state)
@@ -177,7 +175,6 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
     }
 
     override fun componentWillUnmount() {
-        state.videoSource?.close()
         saveMyStuff()
         SavedState.removeOnUnload(::saveMyStuff)
         instance = null
@@ -201,7 +198,6 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
             SavedRecordingState()
         }
         copyFrom(restored)
-        console.log("Restored expanded state ${expanded()}")
         startDate = createValue(Date().withTime(0, 0))
         window.addEventListener("beforeunload", {
             SavedState.save(saveKey, SavedRecordingState.from(state))
@@ -226,7 +222,8 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
      */
     private fun updateRecordings(force: Boolean = false) {
         // filter out unselected streams, and those for which we already have a set of recordings.
-        val needy = cameras.values.flatten().filter { it.key in state.selectedStreams && (force || it.key !in state.recLists) }
+        val needy =
+            cameras.values.flatten().filter { it.key in state.selectedStreams && (force || it.key !in state.recLists) }
         if (needy.isNotEmpty()) {
             // insert an empty list to prevent repeating the fetch below if render is called again before we finish.
             needy.forEach { state.recLists[it.key] = RecList() }
@@ -249,16 +246,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
         }
     }
 
-    // update state, optionally calling refreshList() on completion of the state update.
-    private fun <T : State, P : Props> RComponent<P, T>.notify(doRefresh: Boolean = true, handler: T.() -> Unit) {
-        if (doRefresh)
-            applyState(App::refreshAll) { handler() }
-        else
-            applyState { handler() }
-    }
-
     override fun RBuilder.renderNavBarWidget() {
-        console.log("Rendernavbarwidget")
         child(DateTimeSelector::class) {
             attrs {
                 expanded = state.expanded
@@ -271,6 +259,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
             }
         }
     }
+
     override fun RBuilder.renderContent() {
         styledDiv {
             css {
@@ -321,11 +310,11 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                             alignItems = Align.start
                             if (ResponsiveLayout.isPortrait) {
                                 borderBottomWidth = 1.px
-                                borderBottomColor = Color.gray
+                                borderBottomColor = Theme().borderColor
 
                             } else {
                                 borderLeftWidth = 1.px
-                                borderLeftColor = Color.gray
+                                borderLeftColor = Theme().borderColor
                             }
                         }
                         styledDiv {
@@ -350,18 +339,24 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                                             }
                                         }
                                     }
-                                    showVideo = {
-                                        console.log("Showvideo ${it.caption}/${it.srcUrl}")
+                                    showRecording = {
                                         state.expanded.value = false        //
-                                        state.videoSource?.close()
                                         applyState {
-                                            videoSource = it
+                                            liveSource = null
+                                            recordingSource = it
+                                        }
+                                    }
+                                    showLive = {
+                                        state.expanded.value = false        //
+                                        applyState {
+                                            recordingSource = null
+                                            liveSource = it
                                         }
                                     }
                                     selectedStreams = state.selectedStreams
                                     maxEnd = state.maxEndDateTime
                                     minStart = state.minStartDateTime
-                                    playingRecording = (state.videoSource as? RecordingSource)?.recording
+                                    playingRecording = state.recordingSource?.recording
                                     subTitle = state.subTitle()
                                 }
                             }
@@ -399,14 +394,24 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                                 display = Display.flex
                                 fontSize = 1.2.rem
                                 textAlign = TextAlign.center
-                                backgroundColor = Color.lightGray
+                                backgroundColor = Theme().header.backgroundColor
                             }
-                            +(state.videoSource?.caption ?: "---")
+                            +(state.recordingSource?.caption ?: state.liveSource?.caption ?: "---")
                         }
 
-                        child(Player::class) {
-                            attrs {
-                                source = state.videoSource
+                        if (state.recordingSource != null) {
+                            child(Player::class) {
+                                attrs {
+                                    source = state.recordingSource
+                                    showControls = true
+                                }
+                            }
+                        } else {
+                            child(LivePlayer::class) {
+                                attrs {
+                                    source = state.liveSource
+                                    showControls = true
+                                }
                             }
                         }
                     }

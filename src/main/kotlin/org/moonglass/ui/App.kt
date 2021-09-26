@@ -62,8 +62,9 @@ class App() : RComponent<Props, AppState>() {
 
     private fun restoreShowing(): MainMenu.MainMenuItem {
         val old: String? = SavedState.restore(appComponentKey)
-        return old?.let { MainMenu.getItem(it)} ?: MainMenu.default
+        return old?.let { MainMenu.getItem(it) } ?: MainMenu.default
     }
+
     override fun AppState.init() {
         instance = this@App
         refreshing = mutableSetOf()
@@ -170,12 +171,15 @@ class App() : RComponent<Props, AppState>() {
                 if (item.contentComponent == null)
                     Toast.toast("No content implemented for ${item.title}")
                 // if we are already showing  this content, just refresh it.
-                if (state.contentShowing == item)
+                if (state.contentShowing == item) {
+                    state.isSideBarShowing.value = false
                     item.refresher?.invoke()
-                else
+                } else {
+                    state.isSideBarShowing.value = false
                     setState {
                         contentShowing = item
                     }
+                }
             }
         }
 

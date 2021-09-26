@@ -52,6 +52,7 @@ import kotlinx.css.textAlign
 import kotlinx.css.vh
 import kotlinx.css.zIndex
 import kotlinx.datetime.Clock
+import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.name
 import org.moonglass.ui.utility.Timer
@@ -67,18 +68,11 @@ import styled.styledDiv
 
 external interface ToastState : State {
     var message: String     // message to show
-    var urgency: Toast.Urgency
     var displayState: Toast.State
     var until: Long
 }
 
 class Toast : RComponent<Props, ToastState>() {
-
-    enum class Urgency(val color: Color) {
-        Normal(Color.darkBlue),
-        Alert(Color("#A0A000")),        // amber
-        Alarm(Color.red)
-    }
 
     enum class State {
         Hidden,
@@ -92,11 +86,10 @@ class Toast : RComponent<Props, ToastState>() {
 
         private val fadeoutDuration = 600
 
-        fun toast(message: String, urgency: Urgency = Urgency.Normal, durationSecs: Int = 6) {
+        fun toast(message: String, durationSecs: Int = 6) {
             console.log(message)
             instance?.setState {
                 this.message = message
-                this.urgency = urgency
                 displayState = State.Shown
                 this.until = Clock.System.now().toEpochMilliseconds() + durationSecs * 1000L
             }
@@ -112,7 +105,6 @@ class Toast : RComponent<Props, ToastState>() {
     override fun ToastState.init() {
         until = 0
         message = ""
-        urgency = Urgency.Normal
         until = 0
         displayState = State.Hidden
     }
@@ -122,7 +114,6 @@ class Toast : RComponent<Props, ToastState>() {
     }
 
     override fun componentWillUnmount() {
-        console.log("Toast: ComponentWillUnmount")
         toastTimer.cancel()
         instance = null
     }
@@ -143,10 +134,10 @@ class Toast : RComponent<Props, ToastState>() {
                 left = 50.pct
                 transform { translate(-50.pct, 0.pct) }
                 bottom = 20.vh
-                backgroundColor = Color.black
-                color = Color.white
+                backgroundColor = Theme().notifications.backgroundColor
+                color = Theme().notifications.textColor
                 borderWidth = 1.px
-                borderColor = Color.darkGray
+                borderColor = Theme().borderColor
                 borderRadius = 10.px
                 boxShadow(rgba(0, 0, 0, 0.1), 0.px, 8.px, 15.px)
                 padding(10.px)

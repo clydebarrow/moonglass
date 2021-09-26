@@ -17,23 +17,27 @@
 package org.moonglass.ui.video
 
 import kotlinx.css.Display
+import kotlinx.css.backgroundColor
 import kotlinx.css.display
 import kotlinx.css.flexGrow
 import kotlinx.css.height
+import kotlinx.css.paddingBottom
 import kotlinx.css.pct
+import kotlinx.css.rem
 import kotlinx.css.width
+import org.moonglass.ui.Theme
 import react.Props
 import react.RBuilder
 import react.RComponent
 import react.State
 import react.dom.attrs
-import react.dom.onPause
-import react.dom.onPlay
 import styled.css
 import styled.styledVideo
 
 external interface PlayerProps : Props {
-    var source: VideoSource?
+    var playerKey: String
+    var showControls: Boolean
+    var source: RecordingSource?
 }
 
 external interface PlayerState : State {
@@ -41,11 +45,14 @@ external interface PlayerState : State {
 
 class Player(props: PlayerProps) : RComponent<PlayerProps, PlayerState>(props) {
 
+
     override fun RBuilder.render() {
         styledVideo {
             css {
                 display = Display.flex
                 flexGrow = 1.0
+                backgroundColor = Theme().borderColor
+                paddingBottom = 0.5.rem
                 /*
                 width = state.width.px - 1.5.rem        // allow for padding
                 height = state.height.px - 1.5.rem        // allow for padding
@@ -55,16 +62,15 @@ class Player(props: PlayerProps) : RComponent<PlayerProps, PlayerState>(props) {
                 height = 100.pct
             }
             attrs {
+                key = props.playerKey
                 //width = "${state.width}px"
                 //height = "${state.height}px"
                 autoPlay = true
                 autoBuffer = true
-                controls = true
+                controls = props.showControls
                 poster = "/images/placeholder.jpg"
                 props.source?.also { videoSource ->
                     src = videoSource.srcUrl
-                    onPlay = { videoSource.play() }
-                    onPause = { videoSource.pause() }
                 }
             }
         }
