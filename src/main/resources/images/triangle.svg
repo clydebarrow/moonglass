@@ -1,3 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
-    <path d="M4,20 h16 l-8-16z" />
+    <g fill="#808080">
+        <path d="M4,20 h16 l-8-16z" />
+    </g>
 </svg>

@@ -17,7 +17,6 @@
 package org.moonglass.ui.widgets
 
 import kotlinx.css.Align
-import kotlinx.css.Color
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.FontWeight
@@ -30,6 +29,7 @@ import kotlinx.css.backgroundColor
 import kotlinx.css.borderColor
 import kotlinx.css.borderRadius
 import kotlinx.css.borderWidth
+import kotlinx.css.color
 import kotlinx.css.display
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
@@ -62,12 +62,15 @@ import org.moonglass.ui.cardStyle
 import org.moonglass.ui.name
 import org.moonglass.ui.utility.SavedState
 import org.w3c.dom.HTMLInputElement
+import org.w3c.dom.HTMLSelectElement
 import org.w3c.dom.events.Event
 import react.State
 import react.dom.KeyboardEvent
 import react.dom.attrs
+import react.dom.col
 import react.dom.defaultValue
 import react.dom.onKeyPress
+import react.dom.option
 import react.setState
 import styled.StyledDOMBuilder
 import styled.css
@@ -75,6 +78,7 @@ import styled.styledButton
 import styled.styledDiv
 import styled.styledForm
 import styled.styledInput
+import styled.styledSelect
 
 
 abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
@@ -83,9 +87,66 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
      * An entry in the dialog.
      */
 
-    class Entry(val text: String, val type: InputType, val defaultValue: String = "") {
+    inner open class Entry(val text: String, val inputType: InputType, val defaultValue: String = "") {
         val key = text.replace(" ", "").lowercase()
+
+        var value: String
+            get() = inputData[key] ?: defaultValue
+            set(value) {
+                inputData[key] = value
+            }
+
+        open fun StyledDOMBuilder<*>.render(block: StyledDOMBuilder<*>.() -> Unit) {
+            styledInput(type = inputType) {
+                block()
+                attrs {
+                    defaultValue = this@Entry.value
+                    onChangeFunction = {
+                        val element = (it.target as HTMLInputElement)
+                        this@Entry.value = element.value
+                        setState {
+                            isValid = validate()
+                        }
+                    }
+                }
+            }
+        }
     }
+
+    inner class SelectEntry<T : Enum<T>>(text: String, val choices: List<T>, defaultValue: T = choices.first()) :
+        Entry(text, InputType.text, defaultValue.name) {
+
+        /**
+         * Get the enum constant for this value
+         */
+        val enumValue: T
+            get() = choices.first { it.name == value }
+
+        override fun StyledDOMBuilder<*>.render(block: StyledDOMBuilder<*>.() -> Unit) {
+            styledSelect() {
+                block()
+                attrs {
+                    value = this@SelectEntry.value
+                    onChangeFunction = {
+                        val element = (it.target as HTMLSelectElement)
+                        this@SelectEntry.value = element.value
+                        setState {
+                            isValid = validate()
+                        }
+                    }
+                    choices.forEach {
+                        option {
+                            attrs {
+                                value = it.name
+                            }
+                            +"$it"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 
     abstract val title: String
 
@@ -117,22 +178,8 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
     }
 
 
-    var Entry.value: String
-        get() = inputData[key] ?: ""
-        set(value) {
-            inputData[key] = value
-        }
-
     override fun componentWillUnmount() {
         SavedState.save(saveKey, cleanData())
-    }
-
-    private fun Entry.onValueChange(event: Event) {
-        val element = (event.target as HTMLInputElement)
-        value = element.value
-        setState {
-            isValid = validate()
-        }
     }
 
     private fun keyDown(event: KeyboardEvent<*>) {
@@ -174,6 +221,7 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
             styledDiv {
                 css {
                     backgroundColor = Theme().header.backgroundColor
+                    color = Theme().header.textColor
                     fontWeight = FontWeight.bold
                     justifyContent = JustifyContent.center
                     textAlign = TextAlign.center
@@ -186,6 +234,7 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
             // The dialog items
             styledDiv {
                 css {
+                    color = Theme().content.textColor
                     display = Display.grid
                     gridTemplateColumns = GridTemplateColumns("max-content max-content")
                     width = LinearDimension.maxContent
@@ -203,19 +252,18 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
                         }
                         +item.text
                     }
-                    styledInput(type = item.type) {
-                        css {
-                            justifyContent = JustifyContent.start
-                            width = LinearDimension.fillAvailable
-                            padding(0.5.rem)
-                            borderWidth = 1.px
-                            borderColor = Theme().borderColor
-                            borderRadius = 0.1.rem
-                            margin(bottom = 0.2.rem, right = 0.5.rem)
-                        }
-                        attrs {
-                            defaultValue = item.value
-                            onChangeFunction = { item.onValueChange(it) }
+                    item.apply {
+                        render {
+                            css {
+                                backgroundColor = Theme().content.backgroundColor
+                                justifyContent = JustifyContent.start
+                                width = LinearDimension.fillAvailable
+                                padding(0.5.rem)
+                                borderWidth = 1.px
+                                borderColor = Theme().borderColor
+                                borderRadius = 0.1.rem
+                                margin(bottom = 0.2.rem, right = 0.5.rem)
+                            }
                         }
                     }
                 }
@@ -250,6 +298,7 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
             }
             css {
                 Theme().apply {
+                    color = content.textColor
                     backgroundColor = if (text == cancelText) button.backgroundColor else button.selectedBackgroundColor
                     this@css.borderColor = borderColor
                     disabled {
@@ -273,7 +322,7 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
     }
 
     private fun cleanData(): SavedData {
-        val passwords = items.filter { it.type != InputType.password }.map { it.key }.toSet()
+        val passwords = items.filter { it.inputType != InputType.password }.map { it.key }.toSet()
         return SavedData(inputData.filterKeys { (it in passwords) })
     }
 

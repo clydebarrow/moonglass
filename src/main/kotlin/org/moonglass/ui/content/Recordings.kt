@@ -26,6 +26,7 @@ import kotlinx.css.FlexWrap
 import kotlinx.css.JustifyContent
 import kotlinx.css.JustifyItems
 import kotlinx.css.LinearDimension
+import kotlinx.css.Position
 import kotlinx.css.TextAlign
 import kotlinx.css.alignContent
 import kotlinx.css.alignItems
@@ -34,6 +35,7 @@ import kotlinx.css.borderBottomColor
 import kotlinx.css.borderBottomWidth
 import kotlinx.css.borderLeftColor
 import kotlinx.css.borderLeftWidth
+import kotlinx.css.color
 import kotlinx.css.display
 import kotlinx.css.flex
 import kotlinx.css.flexDirection
@@ -51,6 +53,7 @@ import kotlinx.css.padding
 import kotlinx.css.paddingBottom
 import kotlinx.css.paddingTop
 import kotlinx.css.pct
+import kotlinx.css.position
 import kotlinx.css.properties.ms
 import kotlinx.css.properties.transition
 import kotlinx.css.px
@@ -283,6 +286,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                     alignItems = Align.start
                     flexGrow = 1.0
                     flexWrap = FlexWrap.nowrap
+                    backgroundColor = Theme().content.backgroundColor
                 }
                 styledDiv {
                     name = "StreamGroup"
@@ -366,6 +370,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                 styledDiv {
                     name = "PlayerGroup"
                     css {
+                        backgroundColor = Theme().content.backgroundColor
                         justifyContent = JustifyContent.center
                         alignContent = Align.center
                         padding(0.75.rem)
@@ -383,6 +388,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                     styledDiv {
                         css {
                             display = Display.flex
+                            position = Position.relative
                             flexDirection = FlexDirection.column
                             justifyItems = JustifyItems.center
                             width = 100.pct
@@ -391,10 +397,10 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
 
                         styledDiv {
                             css {
-                                display = Display.flex
                                 fontSize = 1.2.rem
                                 textAlign = TextAlign.center
                                 backgroundColor = Theme().header.backgroundColor
+                                color = Theme().header.textColor
                             }
                             +(state.recordingSource?.caption ?: state.liveSource?.caption ?: "---")
                         }
@@ -402,6 +408,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                         if (state.recordingSource != null) {
                             child(Player::class) {
                                 attrs {
+                                    height = ResponsiveLayout.contentHeight - 3.rem
                                     source = state.recordingSource
                                     showControls = true
                                 }
@@ -409,6 +416,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                         } else {
                             child(LivePlayer::class) {
                                 attrs {
+                                    height = ResponsiveLayout.contentHeight - 3.rem
                                     source = state.liveSource
                                     showControls = true
                                 }

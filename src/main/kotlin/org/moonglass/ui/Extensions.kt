@@ -16,6 +16,8 @@
 
 package org.moonglass.ui
 
+import com.soywiz.krypto.md5
+import io.ktor.utils.io.core.toByteArray
 import kotlinx.browser.window
 import kotlinx.coroutines.await
 import kotlinx.css.Color
@@ -163,6 +165,8 @@ fun StyledDOMBuilder<*>.cardStyle() {
     }
 }
 
+// convert this number to a string with at least `num` digits, zero padding the start
+// as required.
 fun Int.digits(num: Int): String = toString().padStart(num, '0')
 
 fun Double.precision(digits: Int): String {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2021. Clyde Stubbs
+ * Copyright (c) 2021. Clyde Stubbs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,18 @@
  * limitations under the License.
  */
 
-package org.moonglass.ui.utility
+package org.moonglass.ui
 
-import com.soywiz.krypto.md5
-import io.ktor.utils.io.core.toByteArray
+external val process: Process
+
+external interface Process {
+    val env: dynamic
+}
+
+object Debug {
+
+    fun debug(message: String) {
+        console.log(message)
+    }
+}
 

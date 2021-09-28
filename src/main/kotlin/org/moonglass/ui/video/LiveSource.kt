@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.moonglass.ui.Debug
 import org.moonglass.ui.Duration90k
 import org.moonglass.ui.Time90k
 import org.moonglass.ui.api.apiConfig
@@ -57,7 +58,6 @@ class LiveSource(private val stream: Stream) : VideoSource {
 
     override val caption: String = stream.toString()
 
-
     /**
      * The coroutine scope used to run tasks.
      */
@@ -70,15 +70,17 @@ class LiveSource(private val stream: Stream) : VideoSource {
     private lateinit var initSegment: Data
 
     /**
+     * the content-type can be cached for each stream.
+     */
+
+    private var contentType: String = ""
+
+    /**
      * The class used to deliver data
      */
     open class Data(val contentType: String, val data: ByteArray)
 
-    private val flow = MutableSharedFlow<Data>(0, MAX_BUFFER, BufferOverflow.DROP_LATEST).also {
-        it.onSubscription {
-            console.log("$caption: subscribed to flow")
-        }
-    }
+    private val flow = MutableSharedFlow<Data>(0, MAX_BUFFER, BufferOverflow.DROP_LATEST)
 
     /**
      * Publicly accessible flow.
@@ -86,7 +88,6 @@ class LiveSource(private val stream: Stream) : VideoSource {
 
     val dataFlow: SharedFlow<Data>
         get() = flow.onSubscription {
-            console.log("$caption: subscribed to dataFlow")
             if (::initSegment.isInitialized)
                 emit(initSegment)
         }
@@ -119,8 +120,10 @@ class LiveSource(private val stream: Stream) : VideoSource {
                 val message = incoming.receive()
                 val buffer = ByteBuffer(message.data)
                 val data = buffer.parseBuffer()
-                if (!MediaSource.isTypeSupported(data.contentType)) {
-                    Toast.toast("Media type ${data.contentType} not supported")
+                contentType = data.contentType
+                Debug.debug("Got content type $contentType")
+                if (!MediaSource.isTypeSupported(contentType)) {
+                    Toast.toast("Media type $contentType not supported")
                     throw IllegalArgumentException("Media type not supported")
                 }
                 this.cancel()
@@ -133,7 +136,7 @@ class LiveSource(private val stream: Stream) : VideoSource {
                 }
                 initSegment =
                     Data(
-                        data.contentType,
+                        contentType,
                         client.get<HttpResponse>(url).content.readRemaining(100000, 0).readBytes()
                     )
             }
@@ -150,14 +153,14 @@ class LiveSource(private val stream: Stream) : VideoSource {
     private fun open() {
         if (job == null)
             job = scope.launch {
+                Debug.debug("Opening flow $caption")
                 flow.emit(getInitializationSegment())
                 readSocket {
                     try {
                         while (isActive) {
                             val message = incoming.receive()
-                            val buffer = ByteBuffer(message.data)
-                            val data = buffer.parseBuffer()
-                            flow.emit(Data(data.contentType, data.data))
+                            val data = message.data.stripHeaders()
+                            flow.emit(Data(contentType, data))
                         }
                     } catch (ex: Exception) {
                         console.log("$caption: $ex")
@@ -170,6 +173,7 @@ class LiveSource(private val stream: Stream) : VideoSource {
      * End the streaming.
      */
     private fun close() {
+        Debug.debug("Closing flow $caption")
         try {
             job?.cancel()
             job = null
@@ -246,6 +250,9 @@ class LiveSource(private val stream: Stream) : VideoSource {
         }
     }
 
+    /**
+     * Parse a buffer retrieving headers.
+     */
     private fun ByteBuffer.parseBuffer(): DataHeaders {
         val headers = getHeaders()
         val ids = headers["X-Recording-Id"]?.split('.')?.map { it.toIntOrNull() }
@@ -261,6 +268,20 @@ class LiveSource(private val stream: Stream) : VideoSource {
             headers["X-Video-Sample-Entry-Id"]?.toIntOrNull() ?: -1,
             balance
         )
+    }
+
+    /**
+     * Strip headers from a data array
+     */
+    private fun ByteArray.stripHeaders(): ByteArray {
+        var pos = 0
+        while (pos < size - 4) {
+            if (this[pos] == 0xA.toByte() && this[pos + 2] == 0xA.toByte()) {
+                return sliceArray(pos + 3 until size)
+            }
+            pos++
+        }
+        return byteArrayOf()
     }
 
     companion object {

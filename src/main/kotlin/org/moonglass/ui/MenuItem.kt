@@ -76,6 +76,7 @@ class MenuItem(props: MenuItemProps) : RComponent<MenuItemProps, State>(props) {
                 fontSize = 0.875.rem
                 letterSpacing = 0.025.rem
                 width = LinearDimension.fillAvailable
+                color = Theme().content.textColor
                 hover {
                     backgroundColor = Color.lightGray
                     color = Color.gray

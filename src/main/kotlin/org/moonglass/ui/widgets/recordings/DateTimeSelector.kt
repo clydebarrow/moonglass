@@ -26,6 +26,8 @@ import kotlinx.css.JustifyContent
 import kotlinx.css.Position
 import kotlinx.css.alignContent
 import kotlinx.css.alignItems
+import kotlinx.css.backgroundColor
+import kotlinx.css.color
 import kotlinx.css.cursor
 import kotlinx.css.display
 import kotlinx.css.flexDirection
@@ -41,6 +43,7 @@ import kotlinx.css.zIndex
 import kotlinx.html.id
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
+import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.cardStyle
 import org.moonglass.ui.dismisser
@@ -99,6 +102,7 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
                 onKeyDown = ::keyDown
             }
             css {
+                color = Theme().content.textColor
                 display = Display.flex
                 justifyContent = JustifyContent.center
                 alignContent = Align.center
@@ -123,12 +127,18 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
                 +it
             }
         }
-        dismisser({ props.expanded.value = false }, visible = props.expanded()) {}
+        dismisser({ props.expanded.value = false }, visible = props.expanded()) {
+            css {
+                backgroundColor = Theme().overlay
+            }
+        }
         styledDiv {
             name = "DateTimeSelectorExpandable"
             shrinkable(props.expanded(), 50.rem)
             cardStyle()
             css {
+                color = Theme().content.textColor
+                backgroundColor = Theme().content.backgroundColor
                 position = Position.absolute
                 top = 3.rem
                 display = Display.flex
@@ -139,6 +149,8 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
             // wrap the calendar so we can center it.
             styledDiv {
                 css {
+                    backgroundColor = Theme().content.backgroundColor
+                    color = Theme().content.textColor
                     display = Display.flex
                     justifyContent = JustifyContent.center
                     width = 100.pct
@@ -187,6 +199,9 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
                     +"Max duration:"
                 }
                 styledSelect {
+                    css {
+                        backgroundColor = Theme().content.backgroundColor
+                    }
                     attrs {
                         id = "maxDurationSelect"
                         value = props.maxDuration().toString()

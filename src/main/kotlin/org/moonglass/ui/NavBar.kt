@@ -17,7 +17,6 @@
 package org.moonglass.ui
 
 import kotlinx.css.Align
-import kotlinx.css.Color
 import kotlinx.css.CssBuilder
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
@@ -37,6 +36,7 @@ import kotlinx.css.backgroundImage
 import kotlinx.css.borderBottomWidth
 import kotlinx.css.borderColor
 import kotlinx.css.borderRadius
+import kotlinx.css.color
 import kotlinx.css.content
 import kotlinx.css.display
 import kotlinx.css.flex
@@ -66,9 +66,9 @@ import kotlinx.css.top
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import kotlinx.html.DIV
-import kotlinx.html.js.onClickFunction
 import org.moonglass.ui.api.Api
-import org.moonglass.ui.utility.Gravatar
+import org.moonglass.ui.api.gravatarUrl
+import org.moonglass.ui.api.user
 import org.moonglass.ui.utility.StateVar
 import react.Props
 import react.RBuilder
@@ -85,7 +85,6 @@ import styled.styledSpan
 
 external interface NavBarState : State {
     var userMenuOpen: Boolean
-    var mainMenuOpen: Boolean
 }
 
 external interface NavBarProps : Props {
@@ -99,7 +98,6 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
 
     override fun NavBarState.init(props: NavBarProps) {
         userMenuOpen = false
-        mainMenuOpen = false
     }
 
     private fun openUser() {
@@ -169,6 +167,7 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                     css {
                         if (ResponsiveLayout.current.mobile)
                             display = Display.none
+                        color = Theme().content.textColor
                         textTransform = TextTransform.capitalize
                         marginLeft = 1.rem
                         flex(1.0, 1.0, LinearDimension.none)
@@ -235,8 +234,14 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                 attrs {
                     onClick = { openUser() }
                 }
-                val imgSrc = props.api.session?.let { Gravatar.url(it.username) } ?: "/images/profile.svg"
-                styledImg(src = imgSrc) {
+                val imgSrc = props.api.user?.gravatarUrl
+                styledImg {
+                    attrs {
+                        if (imgSrc != null)
+                            src = imgSrc
+                        else
+                            src = "/images/profile.svg"
+                    }
                     css {
                         before {
                             content = QuotedString(" ")
@@ -250,7 +255,10 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                         display = Display.flex
                         alignContent = Align.start
                         width = LinearDimension.auto
-                        padding(left = 0.5.rem, right = 0.5.rem, bottom = 0.5.rem)
+                        margin(right = 0.5.rem)
+                        if (imgSrc != null)
+                            borderRadius = 25.pct
+                        padding(2.px)
                     }
                 }
             }

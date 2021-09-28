@@ -29,6 +29,7 @@ import kotlinx.css.JustifyContent
 import kotlinx.css.TextAlign
 import kotlinx.css.alignContent
 import kotlinx.css.backgroundColor
+import kotlinx.css.color
 import kotlinx.css.display
 import kotlinx.css.flexDirection
 import kotlinx.css.gridColumnEnd
@@ -46,6 +47,7 @@ import kotlinx.css.paddingTop
 import kotlinx.css.pct
 import kotlinx.css.rem
 import kotlinx.css.textAlign
+import kotlinx.css.vh
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import kotlinx.html.js.onChangeFunction
@@ -85,6 +87,10 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
             }
         }
         styledSelect {
+            css {
+                backgroundColor = Theme().content.backgroundColor
+                color = Theme().content.textColor
+            }
             attrs {
                 value = state.layoutState.current
                 onChangeFunction = {
@@ -129,6 +135,12 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
                 val arrangement = layout.arrangement
                 val vFrac = (100.0 / arrangement.rows).pct
                 val hFrac = (100.0 / arrangement.columns).pct
+                val pHeight = (100.vh - ResponsiveLayout.navBarEmHeight) / arrangement.rows - 3.rem
+                // height for player 0 in
+                val pHeight0 = if (arrangement.feature)
+                    pHeight * (arrangement.rows - 1)
+                else
+                    pHeight
                 css {
                     justifyContent = JustifyContent.center
                     gridTemplateRows = GridTemplateRows((1..arrangement.rows).map { vFrac }.joinToString(" "))
@@ -139,6 +151,7 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
                     width = 100.pct
                     maxHeight = 100.pct
                     paddingTop = ResponsiveLayout.navBarEmHeight
+                    backgroundColor = Theme().content.backgroundColor
                 }
                 name = "playersContent"
                 repeat(arrangement.totalPlayers) { index ->
@@ -163,6 +176,7 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
                             css {
                                 textAlign = TextAlign.center
                                 backgroundColor = Theme().header.backgroundColor
+                                color = Theme().header.textColor
                                 padding(0.5.rem)
                             }
                             attrs {
@@ -195,6 +209,7 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
                                 playerKey = "live-player-$index"
                                 source = stream?.let { LiveSourceFactory.getSource(it) }
                                 showControls = true
+                                height = if (index == 0) pHeight0 else pHeight
                             }
                         }
                     }

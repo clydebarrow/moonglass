@@ -64,6 +64,34 @@ object Theme {
                 override val selectedBackgroundColor = Color("#e0e0ff")     // used for active non-cancel buttons
                 override val disabledBackgroundColor = Color("#f0f0f0")     // disabled buttons
             }
+        },
+        Dark {
+            override val borderColor: Color = Color.darkGray
+            override val selectedBorderColor: Color = Color("#000070")
+            override val header = object : ColorSet {
+                override val textColor: Color = Color.white
+                override val backgroundColor = Color("#00005b")
+            }
+            override val subHeader = object : ColorSet {
+                override val textColor: Color = Color.white
+                override val backgroundColor = header.backgroundColor.darken(40)
+                override val selectedBackgroundColor: Color = Color.darkKhaki
+            }
+            override val notifications = object : ColorSet {
+                override val textColor: Color = Color.black
+                override val backgroundColor = Color.white
+            }
+            override val content = object : ColorSet {
+                override val textColor: Color = Color("#f0f0f0")
+                override val backgroundColor = Color.black
+            }
+            override val button: ColorSet = object : ColorSet {
+                override val textColor: Color = content.textColor
+                override val backgroundColor: Color = Color("#800e0e")      // used for cancel button
+                override val selectedBackgroundColor = Color("#00600f")     // used for active non-cancel buttons
+                override val disabledBackgroundColor = Color("#202020")     // disabled buttons
+            }
+            override val overlay: Color = Color("#80808030")
         };
 
         abstract val header: ColorSet
@@ -76,7 +104,7 @@ object Theme {
         open val overlay = Color("#00000030")       // modal mask color
     }
 
-    var current: Mode = Mode.values().first()
+    var current: Mode = Mode.values().last()
 
     operator fun invoke() = current
 }

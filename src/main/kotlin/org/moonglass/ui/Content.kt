@@ -16,16 +16,12 @@
 
 package org.moonglass.ui
 
-import kotlinx.html.DIV
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.utility.StateVar
 import react.Props
 import react.RBuilder
 import react.RComponent
 import react.State
-import react.dom.option
-import styled.StyledDOMBuilder
-import styled.styledSelect
 
 external interface ContentProps : Props {
     var api: Api

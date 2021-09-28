@@ -20,15 +20,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import kotlinx.css.Display
+import kotlinx.css.LinearDimension
 import kotlinx.css.backgroundColor
-import kotlinx.css.display
-import kotlinx.css.flexGrow
 import kotlinx.css.height
-import kotlinx.css.paddingBottom
 import kotlinx.css.pct
-import kotlinx.css.rem
 import kotlinx.css.width
+import org.moonglass.ui.Debug
 import org.moonglass.ui.Theme
 import org.w3c.dom.HTMLVideoElement
 import org.w3c.dom.mediasource.AppendMode
@@ -48,6 +45,7 @@ import styled.css
 import styled.styledVideo
 
 external interface LivePlayerProps : Props {
+    var height: LinearDimension?
     var playerKey: String
     var showControls: Boolean
     var source: LiveSource?
@@ -55,43 +53,39 @@ external interface LivePlayerProps : Props {
 
 class LivePlayer(props: LivePlayerProps) : RComponent<LivePlayerProps, PlayerState>(props) {
 
+    private val bufferQueue = ArrayDeque<ByteArray>()
+    private lateinit var contentType: String
 
     /**
-     * Cache mediasource for a given source.
+     * Cache mediaSource for a given source.
      */
     private inner class SourceMemo {
         private var key: String? = null
         private var mediaSource: MediaSource? = null
         private var srcUrl: String = ""
 
-        fun getSource(key: String): MediaSource {
+        fun getSrcUrl(key: String): String {
             mediaSource?.let {
-                if (key == this.key) return it
+                if (key == this.key) return srcUrl
                 it.onsourceopen = null
                 it.onsourceended = null
                 it.onsourceclose = null
             }
             close()
             this.key = key
-            MediaSource().apply {
-                return MediaSource().apply {
-                    // attach event listeners
-                    onsourceended = {
-                    }
-                    onsourceclose = {
-                        close()
-                    }
-                    onsourceopen = {
-                        open(it.currentTarget as MediaSource)
-                    }
-                    srcUrl = URL.createObjectURL(this)
-                    mediaSource = this
+            mediaSource = MediaSource().apply {
+                // attach event listeners
+                onsourceended = {
                 }
+                onsourceclose = {
+                    close()
+                }
+                onsourceopen = {
+                    open(it.currentTarget as MediaSource)
+                }
+                srcUrl = URL.createObjectURL(this)
             }
-        }
-
-        fun getSrcUrl(key: String): String {
-            getSource(key)
+            Debug.debug("got srcUrl $srcUrl")
             return srcUrl
         }
     }
@@ -135,14 +129,35 @@ class LivePlayer(props: LivePlayerProps) : RComponent<LivePlayerProps, PlayerSta
     /**
      * Get a source buffer.
      */
-    private fun getSourceBuffer(mediaSource: MediaSource, contentType: String): SourceBuffer {
+    private fun getSourceBuffer(mediaSource: MediaSource): SourceBuffer {
         mediaSource.sourceBuffers[0]?.let { return it }
         return mediaSource.addSourceBuffer(contentType).apply {
             mode = AppendMode.SEGMENTS
+            onupdate = {
+                transfer(mediaSource)
+            }
             onupdateend = {
                 if (mediaSource.readyState == ReadyState.OPEN)      // in case it's being shut down.
                     trimTo(300)
             }
+        }
+    }
+
+    private fun transfer(mediaSource: MediaSource) {
+        while (bufferQueue.isNotEmpty()) {
+            if (mediaSource.readyState != ReadyState.OPEN)
+                return
+            val srcBuffer = getSourceBuffer(mediaSource)
+            if (srcBuffer.updating)
+                return
+            val range = srcBuffer.timeRange
+            srcBuffer.timestampOffset = range.second
+            mediaSource.setLiveSeekableRange(
+                (range.second - LiveSource.MAX_TIME - 60).coerceAtLeast(range.first),
+                range.second
+            )
+            srcBuffer.appendBuffer(bufferQueue.removeFirst())
+            videoRef.current?.play()
         }
     }
 
@@ -154,19 +169,12 @@ class LivePlayer(props: LivePlayerProps) : RComponent<LivePlayerProps, PlayerSta
             props.source?.let { source ->
                 job = scope.launch {
                     source.dataFlow.collect { data ->
-                        if (mediaSource.readyState == ReadyState.OPEN) {
-                            val srcBuffer = getSourceBuffer(mediaSource, data.contentType)
-                            if (!srcBuffer.updating) {
-                                val range = srcBuffer.timeRange
-                                srcBuffer.timestampOffset = range.second
-                                mediaSource.setLiveSeekableRange(
-                                    (range.second - LiveSource.MAX_TIME - 60).coerceAtLeast(range.first),
-                                    range.second
-                                )
-                                srcBuffer.appendBuffer(data.data)
-                                videoRef.current?.play()
-                            }
-                        }
+                        contentType = data.contentType
+                        if (bufferQueue.size < MAX_BUFFER)
+                            bufferQueue.add(data.data)
+                        else
+                            console.log("Dropped buffer")
+                        transfer(mediaSource)
                     }
                 }
             }
@@ -189,23 +197,13 @@ class LivePlayer(props: LivePlayerProps) : RComponent<LivePlayerProps, PlayerSta
         styledVideo {
             ref = videoRef
             css {
-                display = Display.flex
-                flexGrow = 1.0
-                backgroundColor = Theme().borderColor
-                paddingBottom = 0.5.rem
-                /*
-                width = state.width.px - 1.5.rem        // allow for padding
-                height = state.height.px - 1.5.rem        // allow for padding
-
-                 */
+                backgroundColor = Theme().content.backgroundColor
                 width = 100.pct
-                height = 100.pct
+                height = props.height ?: 100.pct
             }
             attrs {
                 set("muted", true)
                 key = props.playerKey
-                //width = "${state.width}px"
-                //height = "${state.height}px"
                 autoPlay = true
                 autoBuffer = true
                 controls = props.showControls
@@ -215,5 +213,9 @@ class LivePlayer(props: LivePlayerProps) : RComponent<LivePlayerProps, PlayerSta
                 } ?: ""
             }
         }
+    }
+
+    companion object {
+        const val MAX_BUFFER = 10
     }
 }

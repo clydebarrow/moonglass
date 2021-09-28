@@ -28,12 +28,9 @@ version = "1.0-SNAPSHOT"
 repositories {
     mavenCentral()
     maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-js-wrappers")
-    maven { url = uri("https://dl.bintray.com/korlibs/korlibs") }
+    maven("https://dl.bintray.com/korlibs/korlibs")
 }
 
-/** TODO
- * Move this into buildSrc
- */
 open class PropertiesFile(private val file: File) {
     val props = Properties().apply {
         file.inputStream().use { load(it) }
@@ -77,9 +74,9 @@ dependencies {
     implementation("io.ktor:ktor-client-js:$ktorVersion")
     implementation("io.ktor:ktor-client-websockets:$ktorVersion")
     implementation("io.ktor:ktor-client-serialization:$ktorVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:1.5.2")
     implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.0-pre.236-kotlin-1.5.30")
-    implementation("com.soywiz.korlibs.krypto:krypto-js:2.4.0")
+    implementation("com.soywiz.korlibs.krypto:krypto-js:2.4.1")
 
     implementation(npm("react", "17.0.2"))
     implementation(npm("react-dom", "17.0.2"))

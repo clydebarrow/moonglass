@@ -61,7 +61,7 @@ external interface AppState : State {
 class App() : RComponent<Props, AppState>() {
 
     private fun restoreShowing(): MainMenu.MainMenuItem {
-        val old: String? = SavedState.restore(appComponentKey)
+        val old:String? = SavedState.restore(appComponentKey)
         return old?.let { MainMenu.getItem(it) } ?: MainMenu.default
     }
 
@@ -168,8 +168,6 @@ class App() : RComponent<Props, AppState>() {
         fun showContent(item: MainMenu.MainMenuItem) {
             console.log("showContent ${item.title}")
             instance?.apply {
-                if (item.contentComponent == null)
-                    Toast.toast("No content implemented for ${item.title}")
                 // if we are already showing  this content, just refresh it.
                 if (state.contentShowing == item) {
                     state.isSideBarShowing.value = false

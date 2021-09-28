@@ -18,6 +18,7 @@ package org.moonglass.ui
 
 import org.moonglass.ui.content.LiveView
 import org.moonglass.ui.content.Recordings
+import org.moonglass.ui.widgets.Toast
 import react.State
 import kotlin.reflect.KClass
 
@@ -25,7 +26,10 @@ object MainMenu {
 
     private fun onSelected(id: String) {
         getItem(id)?.let {
-            App.showContent(it)
+            if (it.contentComponent == null)
+                Toast.toast("No content implemented for ${it.title}")
+            else
+                App.showContent(it)
         }
     }
 
@@ -78,7 +82,10 @@ object MainMenu {
 
     val default get() = menu.first().items.first()
 
-    fun getItem(id: String): MainMenuItem? {
-        return items[id]
+    fun getItem(id: String): MainMenuItem {
+        val item =  items[id]
+        if(item?.contentComponent == null)
+            return default
+        return item
     }
 }

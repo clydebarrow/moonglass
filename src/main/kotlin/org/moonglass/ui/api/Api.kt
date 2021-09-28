@@ -16,6 +16,7 @@
 
 package org.moonglass.ui.api
 
+import com.soywiz.krypto.md5
 import io.ktor.client.HttpClient
 import io.ktor.client.features.ClientRequestException
 import io.ktor.client.features.HttpTimeout
@@ -29,7 +30,9 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.URLBuilder
 import io.ktor.http.URLProtocol
 import io.ktor.http.contentType
+import io.ktor.utils.io.core.toByteArray
 import kotlinx.browser.window
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.moonglass.ui.App
 import org.moonglass.ui.as90k
@@ -43,6 +46,8 @@ import kotlin.time.Duration
 data class Api(
     val cameras: List<Camera> = listOf(),
     val session: Session? = null,
+    @SerialName("user")
+    val userData: UserData? = null,
     val signals: List<Signal> = listOf(),
     val signalTypes: List<SignalType> = listOf(),
     val timeZoneName: String = ""// Australia/Sydney
@@ -50,9 +55,9 @@ data class Api(
     @Serializable
     data class Camera(
         val id: Int = 0,
-        val description: String, // Hikvision Driveway Camera
-        val shortName: String, // Driveway
-        val streams: Map<String, StreamData>,
+        val description: String = "", // Hikvision Driveway Camera
+        val shortName: String = "", // Driveway
+        val streams: Map<String, StreamData> = mapOf(),
         val uuid: String // 7f2e2a50-1e68-4647-817b-03089ca2003e
     )
 
@@ -89,8 +94,16 @@ data class Api(
 
     @Serializable
     data class Session(
-        val username: String,
+        val username: String? = null,
         val csrf: String
+    )
+
+    @Serializable
+    data class UserData(
+        val id: Int, // 1
+        val name: String, // user@example.com
+        val preferences: Map<String, String> = mapOf(),
+        val session: Session
     )
 
     companion object {
@@ -210,6 +223,20 @@ data class Api(
         }
     }
 }
+
+/**
+ * Retrieve the user data, allowing old and new formats
+ */
+val Api.user: Api.UserData?
+    get() = userData ?: session?.username?.let {
+        Api.UserData(0, it, mapOf(), session)
+    }
+val Api.UserData.gravatarUrl: String
+    get() {
+        val hash = name.trim().lowercase().toByteArray().md5().hexLower
+        return "https://www.gravatar.com/avatar/$hash.jpg?d=mp"
+    }
+
 
 fun URLBuilder.apiConfig(vararg pathSegments: String, websocket: Boolean = false) {
     window.location.also { location ->

@@ -214,6 +214,8 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                         onClickFunction = { props.showRecording(RecordingSource(stream, recording, props.subTitle)) }
                     }
                     css {
+                        backgroundColor = Theme().content.backgroundColor
+                        color = Theme().content.textColor
                         position = Position.relative    // required to make tooltip work.
                         display = Display.flex
                         flexDirection = FlexDirection.row
@@ -250,6 +252,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
         styledDiv {
             name = "CameraScroller"
             css {
+                backgroundColor = Theme().content.backgroundColor
                 overflowY = Overflow.scroll
                 display = Display.flex
                 flexDirection = FlexDirection.column
