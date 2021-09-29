@@ -1,6 +1,7 @@
 # Project exclude paths
-/.gradle/
-/build/
+afile
+.gradle/
+build/
 .idea
 .DS_Store
 local.properties

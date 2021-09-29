@@ -16,26 +16,29 @@
 
 import java.util.Properties
 
-plugins {
-    kotlin("js") 
+buildscript {
+    dependencies {
+        listOf(
+            Plugins.kotlin,
+        ).forEach { classpath(it()) }
+    }
 }
 
+val kotlinVersion: String = org.jetbrains.kotlin.config.KotlinCompilerVersion.VERSION
+println("Kotlin version used is $kotlinVersion")
+
+plugins {
+    kotlin("js") version Plugins.kotlin.version
+    kotlin("plugin.serialization") version Plugins.kotlin.version
+}
+
+val localProperties get() = PropertiesFile(File("local.properties"))
 
 repositories {
     mavenCentral()
     maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-js-wrappers")
-    maven("https://dl.bintray.com/korlibs/korlibs")
+    maven("https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven")
 }
-
-open class PropertiesFile(private val file: File) {
-    val props = Properties().apply {
-        file.inputStream().use { load(it) }
-    }
-
-    operator fun get(name: String): String? = (props[name] as? String)
-}
-
-val localProperties get() = PropertiesFile(File("local.properties"))
 
 kotlin {
     js(IR) {
@@ -59,25 +62,31 @@ kotlin {
     }
 }
 
+val reactVersion = "17.0.2-pre.250-kotlin-1.5.31"
+val styledVersion = "5.3.1-pre.250-kotlin-1.5.31"
+
 val ktorVersion = "1.6.3"
 
 dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.2.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-js:1.2.2")
-    implementation("org.jetbrains.kotlin-wrappers:kotlin-react:17.0.2-pre.236-kotlin-1.5.30")
-    implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:17.0.2-pre.236-kotlin-1.5.30")
+    implementation("org.jetbrains.kotlin-wrappers:kotlin-react:$reactVersion")
+    implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:$reactVersion")
+    implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:$styledVersion")
+
     implementation("io.ktor:ktor-client-js:$ktorVersion")
     implementation("io.ktor:ktor-client-websockets:$ktorVersion")
     implementation("io.ktor:ktor-client-serialization:$ktorVersion")
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:1.5.2")
-    implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:5.3.0-pre.236-kotlin-1.5.30")
+
     implementation("com.soywiz.korlibs.krypto:krypto-js:2.4.1")
 
     implementation(npm("react", "17.0.2"))
     implementation(npm("react-dom", "17.0.2"))
     implementation(npm("react-calendar", "3.4.0"))
-    implementation(npm("styled-components", "~5.2.3"))
+    implementation(npm("styled-components", "5.3.1"))
 
 }
 

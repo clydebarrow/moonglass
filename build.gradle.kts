@@ -42,10 +42,6 @@ val kotlinVersion: String = org.jetbrains.kotlin.config.KotlinCompilerVersion.VE
 
 println("Kotlin version used is $kotlinVersion")
 
-plugins {
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.5.31"
-    idea
-}
 
 
 //--------- Version Increment ----------//
@@ -88,22 +84,16 @@ fun incrementBuildNumber() {
     }
 }
 
-group = "org.example"
+group = "com.controlj.moonglass"
 version = versionString
 
+
 allprojects {
-    ext.set("buildNumber", buildNumber)
-    ext.set("versionString", versionString)
     repositories {
-        mavenLocal()
         mavenCentral()
-    }
-    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions {
-            jvmTarget = "11"
-            freeCompilerArgs += "-Xuse-experimental=kotlin.ExperimentalUnsignedTypes"
-            freeCompilerArgs += "-Xuse-experimental=kotlin.ExperimentalStdlibApi"
-        }
+        maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-js-wrappers")
+        //maven("https://dl.bintray.com/korlibs/korlibs")
+        maven("https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven")
     }
 }
 
