@@ -6,4 +6,6 @@ pluginManagement {
 }
 rootProject.name = "moonglass"
 
+include(":webapp")
+
 
