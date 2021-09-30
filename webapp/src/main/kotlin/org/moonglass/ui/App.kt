@@ -33,6 +33,7 @@ import kotlinx.css.vw
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import org.moonglass.ui.api.Api
+import org.moonglass.ui.user.User
 import org.moonglass.ui.utility.SavedState
 import org.moonglass.ui.utility.StateVar
 import org.moonglass.ui.widgets.Dialog
@@ -54,6 +55,8 @@ external interface AppState : State {
     var dialogShowing: KClass<out Dialog>?
     var dismissable: Boolean
     var isSideBarShowing: StateVar<Boolean>
+    var isContextMenuShowing: StateVar<Boolean>
+    var contextMenuData: ContextMenuData
     var api: Api
 }
 
@@ -61,7 +64,7 @@ external interface AppState : State {
 class App() : RComponent<Props, AppState>() {
 
     private fun restoreShowing(): MainMenu.MainMenuItem {
-        val old:String? = SavedState.restore(appComponentKey)
+        val old: String? = SavedState.restore(appComponentKey)
         return old?.let { MainMenu.getItem(it) } ?: MainMenu.default
     }
 
@@ -70,6 +73,8 @@ class App() : RComponent<Props, AppState>() {
         refreshing = mutableSetOf()
         contentShowing = restoreShowing()
         isSideBarShowing = StateVar(false, this@App)
+        isContextMenuShowing = StateVar(false, this@App)
+        contextMenuData = ContextMenuData()
         api = Api()
         refreshList()
     }
@@ -103,6 +108,8 @@ class App() : RComponent<Props, AppState>() {
     override fun RBuilder.render() {
         styledDiv {
             css {
+                if (Theme().isDark)
+                    put("color-scheme", "dark")
                 position = Position.relative
                 flexGrow = 1.0
                 display = Display.flex
@@ -125,6 +132,14 @@ class App() : RComponent<Props, AppState>() {
                         }
                     }
                 } ?: +title
+            }
+        }
+        // Context menu
+        child(Menu::class) {
+            attrs {
+                groups = state.contextMenuData.groups
+                style = state.contextMenuData.style
+                isShowing = state.isContextMenuShowing
             }
         }
         child(Toast::class) { attrs { } }
@@ -164,6 +179,16 @@ class App() : RComponent<Props, AppState>() {
         }
 
         val selectedItemId: String? get() = instance?.state?.contentShowing?.menuId
+
+        fun showContextMenu(data: ContextMenuData) {
+            instance?.let {
+                it.state.isContextMenuShowing.value = false
+                it.setState {
+                    contextMenuData = data
+                }
+                it.state.isContextMenuShowing.value = true
+            }
+        }
 
         fun showContent(item: MainMenu.MainMenuItem) {
             console.log("showContent ${item.title}")

@@ -16,8 +16,6 @@
 
 package org.moonglass.ui
 
-import com.soywiz.krypto.md5
-import io.ktor.utils.io.core.toByteArray
 import kotlinx.browser.window
 import kotlinx.coroutines.await
 import kotlinx.css.Color
@@ -30,10 +28,12 @@ import kotlinx.css.bottom
 import kotlinx.css.display
 import kotlinx.css.left
 import kotlinx.css.margin
+import kotlinx.css.opacity
 import kotlinx.css.padding
 import kotlinx.css.pointerEvents
 import kotlinx.css.position
 import kotlinx.css.properties.boxShadow
+import kotlinx.css.properties.transition
 import kotlinx.css.px
 import kotlinx.css.rem
 import kotlinx.css.rgba
@@ -62,6 +62,7 @@ object Extensions {
     class Size(val name: String, val value: Double) {
         fun format(number: Double) = "${(number / value).minTwo} $name"
     }
+
     val sizes = listOf("bytes", "KiB", "MiB", "GiB", "TiB")
         .mapIndexed { index, s -> Size(s, 1024.0.pow(index)) }
 }
@@ -186,7 +187,7 @@ val Double.minTwo: String
 // get a size as a string like "125 bytes" or "1.5 GiB"
 val Long.asSize: String
     get() {
-        return Extensions.sizes.let { sizes->
+        return Extensions.sizes.let { sizes ->
             (sizes.firstOrNull { (this / it.value).toInt() in (1..999) } ?: sizes.last()).format(this.toDouble())
         }
     }
@@ -270,6 +271,7 @@ fun Date.after(other: Date): Boolean {
 fun RBuilder.dismisser(
     onDismiss: () -> Unit,
     visible: Boolean = true,
+    background: Color = Theme().overlay,
     z: Int = ZIndex.Dismisser(),
     builder: StyledDOMBuilder<DIV>.() -> Unit
 ) {
@@ -281,10 +283,12 @@ fun RBuilder.dismisser(
             top = 0.px
             bottom = 0.px
             right = 0.px
-            backgroundColor = Color.transparent
+            transition("all", ResponsiveLayout.menuTransitionTime)
+            backgroundColor = background
             zIndex = z
             if (!visible) {
-                display = Display.none
+                opacity = 0.0
+                zIndex = -1000
                 pointerEvents = PointerEvents.none
             }
         }

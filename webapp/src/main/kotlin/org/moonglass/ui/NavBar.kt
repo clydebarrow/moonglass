@@ -69,6 +69,7 @@ import kotlinx.html.DIV
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.api.gravatarUrl
 import org.moonglass.ui.api.user
+import org.moonglass.ui.user.User
 import org.moonglass.ui.utility.StateVar
 import react.Props
 import react.RBuilder
@@ -76,7 +77,6 @@ import react.RComponent
 import react.State
 import react.dom.attrs
 import react.dom.onClick
-import react.setState
 import styled.StyledDOMBuilder
 import styled.css
 import styled.styledDiv
@@ -84,7 +84,6 @@ import styled.styledImg
 import styled.styledSpan
 
 external interface NavBarState : State {
-    var userMenuOpen: Boolean
 }
 
 external interface NavBarProps : Props {
@@ -97,18 +96,17 @@ external interface NavBarProps : Props {
 class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
 
     override fun NavBarState.init(props: NavBarProps) {
-        userMenuOpen = false
     }
 
     private fun openUser() {
-        setState { userMenuOpen = true }
+        App.showContextMenu(ContextMenuData(listOf(MenuGroup("", User.menu)), ContextStyle(vert = 4.0, horz = -2.0)))
     }
 
     private fun StyledDOMBuilder<DIV>.hamburger(n: Int, block: CssBuilder.() -> Unit) {
         styledSpan {
 
             css {
-                classes.add("left-anchor")      // can't apply transform-origin here apparently
+                put("transform-origin", "left center")
                 position = Position.relative
                 height = 20.pct
                 backgroundColor = Theme().content.textColor

@@ -19,6 +19,8 @@ package org.moonglass.ui
 import kotlinx.css.Color
 import kotlinx.css.CssBuilder
 import kotlinx.css.FontWeight
+import kotlinx.css.LinearDimension
+import kotlinx.css.Overflow
 import kotlinx.css.Position
 import kotlinx.css.TextTransform
 import kotlinx.css.backgroundColor
@@ -28,20 +30,25 @@ import kotlinx.css.color
 import kotlinx.css.em
 import kotlinx.css.fontSize
 import kotlinx.css.fontWeight
+import kotlinx.css.height
 import kotlinx.css.left
 import kotlinx.css.letterSpacing
+import kotlinx.css.maxHeight
+import kotlinx.css.overflow
 import kotlinx.css.padding
 import kotlinx.css.position
-import kotlinx.css.properties.animation
 import kotlinx.css.properties.boxShadow
+import kotlinx.css.properties.transition
 import kotlinx.css.px
 import kotlinx.css.rem
 import kotlinx.css.rgba
 import kotlinx.css.right
 import kotlinx.css.textTransform
 import kotlinx.css.top
+import kotlinx.css.vh
 import kotlinx.css.width
 import kotlinx.css.zIndex
+import org.moonglass.ui.utility.StateVar
 import react.RBuilder
 import react.RComponent
 import react.State
@@ -51,21 +58,27 @@ import styled.styledDiv
 external interface MenuProps : react.Props {
     var groups: List<MenuGroup<out MenuItemTemplate>>
     var style: MenuStyle
-    var dismiss: ((Menu) -> Unit)?
+    var isShowing: StateVar<Boolean>?
 }
 
 interface MenuStyle {
-    fun CssBuilder.style()
+    fun CssBuilder.style(isVisible: Boolean)
+    val dismisserColor: Color
+        get() = Color.transparent
 }
 
 @JsExport
 class Menu(props: MenuProps) : RComponent<MenuProps, State>(props) {
     override fun RBuilder.render() {
-        props.dismiss.let { dismiss ->
+        props.isShowing.let { dismiss ->
             if (dismiss == null)
                 addMenu()
             else {
-                dismisser({ dismiss(this@Menu) }) { addMenu() }
+                dismisser(
+                    background = props.style.dismisserColor,
+                    onDismiss = { dismiss.value = false },
+                    visible = dismiss.value
+                ) { addMenu() }
             }
         }
     }
@@ -75,7 +88,7 @@ class Menu(props: MenuProps) : RComponent<MenuProps, State>(props) {
             name = "menuOuter"
             css {
                 props.style.apply {
-                    style()
+                    style(props.isShowing?.value != false)
                 }
             }
             props.groups.forEach { group ->
@@ -101,3 +114,39 @@ class Menu(props: MenuProps) : RComponent<MenuProps, State>(props) {
         }
     }
 }
+
+/**
+ * Style for a context menu
+ */
+class ContextStyle(private val horz: Double, private val vert: Double) : MenuStyle {
+    override fun CssBuilder.style(isVisible: Boolean) {
+        position = Position.absolute
+        if (vert >= 0)
+            top = vert.rem
+        else
+            bottom = -vert.rem
+        if (horz >= 0)
+            left = horz.rem
+        else
+            right = -horz.rem
+        borderRadius = 0.25.rem
+        backgroundColor = Theme().menu.backgroundColor
+        boxShadow(rgba(0, 0, 0, 0.1), 0.px, 20.px, 25.px, (-5).px)
+        boxShadow(rgba(0, 0, 0, 0.04), 0.px, 10.px, 10.px, -5.px)
+        transition("all", ResponsiveLayout.menuTransitionTime)
+        height = LinearDimension.auto
+        zIndex = ZIndex.Menu()
+        // hide by changing width to zero. This is animatable.
+        overflow = Overflow.hidden
+        width = if(isVisible) 12.rem else 0.px
+    }
+}
+
+/**
+ * Data for a context menu
+ */
+
+class ContextMenuData(
+    val groups: List<MenuGroup<out MenuItemTemplate>> = listOf(),
+    val style: ContextStyle = ContextStyle(0.0, 0.0)
+)

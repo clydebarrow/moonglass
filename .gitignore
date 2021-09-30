@@ -1,5 +1,8 @@
 # Project exclude paths
 afile
+scratch/
+go.sum
+*.iml
 .gradle/
 build/
 .idea

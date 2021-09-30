@@ -115,7 +115,8 @@ class SideBar : RComponent<SideBarProps, State>() {
 
 
         private val menuStyle = object : MenuStyle {
-            override fun CssBuilder.style() {
+            override val dismisserColor: Color = Theme().overlay
+            override fun CssBuilder.style(isVisible: Boolean) {
                 flexGrow = 1.0
                 display = Display.flex
                 flexDirection = FlexDirection.column

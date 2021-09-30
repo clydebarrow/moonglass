@@ -70,7 +70,7 @@ class Spinner : RComponent<Props, State>() {
                     height = 7.rem
                     borderWidth = 0.25.rem
                     borderStyle = BorderStyle.solid
-                    borderColor = Theme().button.backgroundColor
+                    borderColor = Theme().spinner
                     borderRightColor = Color.transparent
                     borderRadius = 50.pct
                     animation(duration = 0.75.s, timing = Timing.linear, iterationCount = IterationCount.infinite) {

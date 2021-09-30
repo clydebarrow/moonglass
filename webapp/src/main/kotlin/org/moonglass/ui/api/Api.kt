@@ -35,6 +35,8 @@ import kotlinx.browser.window
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.moonglass.ui.App
+import org.moonglass.ui.Duration90k
+import org.moonglass.ui.Time90k
 import org.moonglass.ui.as90k
 import org.moonglass.ui.user.User
 import org.moonglass.ui.widgets.Toast
@@ -63,9 +65,10 @@ data class Api(
 
     @Serializable
     data class Day(
-        val endTime90k: Long, // 146683224000000
-        val startTime90k: Long, // 146675448000000
-        val totalDuration90k: Long // 3807838306
+        val endTime90k: Time90k, // 146683224000000
+        val startTime90k: Time90k, // 146675448000000
+        val totalDuration90k: Duration90k = 0,
+        val states: List<Duration90k> = listOf()
     )
 
     @Serializable

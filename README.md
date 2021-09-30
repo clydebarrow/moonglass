@@ -4,10 +4,10 @@
 
 This is a work in progress, but is basically functional.
 
-#### To run as a development server:
+#### To run the web app as a development server:
 
-* clone this repository - `git clone https://github.com/clydebarrow/moonglasss.git`
-* cd into `moonglass`
+* clone this repository - `git clone https://github.com/clydebarrow/moonglass.git`
+* cd into `moonglass/webapp`
 * Create the file "local.properties" and add a line like this:
 ````
 nvrHost=http://192.168.1.50:8080
