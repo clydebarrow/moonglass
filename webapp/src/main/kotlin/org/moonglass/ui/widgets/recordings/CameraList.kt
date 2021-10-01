@@ -61,6 +61,7 @@ import org.moonglass.ui.api.getEndTime
 import org.moonglass.ui.api.getStartDate
 import org.moonglass.ui.api.getStartTime
 import org.moonglass.ui.api.storage
+import org.moonglass.ui.asBitRate
 import org.moonglass.ui.asSize
 import org.moonglass.ui.name
 import org.moonglass.ui.style.column
@@ -210,9 +211,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                         "${it.width}x${it.height}"
                     } ?: ""
                 styledButton {
-                    val bitwhole = recording.bitrate.toInt()
-                    val bitfrac = ((recording.bitrate - bitwhole.toDouble()) * 10).roundToInt()
-                    tooltip = "$resolution ${recording.fps}fps ${recording.storage} $bitwhole.$bitfrac Mbps"
+                    tooltip = "$resolution ${recording.fps}fps ${recording.storage} ${recording.bitrate.asBitRate}"
                     attrs {
                         onClickFunction = { props.showRecording(RecordingSource(stream, recording, props.subTitle)) }
                     }

@@ -16,15 +16,59 @@
 
 package org.moonglass.ui.video
 
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import org.moonglass.ui.widgets.recordings.Stream
 
+/**
+ * A central place to create LiveSources. A single LiveSource can stream the same data to multiple
+ * MediaSources so we use a cache to avoid creating new objects.
+ */
 object LiveSourceFactory {
 
     private val sourceCache = mutableMapOf<String, LiveSource>()
 
+    private val scope = MainScope()
+
     fun getSource(stream: Stream): LiveSource {
         return sourceCache.getOrPut(stream.key) {
             LiveSource(stream)
+        }.also {
+            updateFlow()
         }
     }
+
+    private var timerJob: Job? = null
+
+    /**
+     * Update the sources state
+     */
+    fun updateFlow() {
+        if (timerJob == null) {
+            timerJob = (1..Int.MAX_VALUE).asSequence().asFlow().onEach {
+                delay(2000)
+                updateFlow()
+            }.launchIn(scope)
+        }
+        scope.launch {
+            iFlow.emit(sources)
+        }
+    }
+
+    /**
+     * Get a list of sources currently in the cache
+     */
+    val sources: List<LiveSource> get() = sourceCache.values.sortedBy { it.caption }
+
+    private val iFlow = MutableSharedFlow<List<LiveSource>>(1, 1, BufferOverflow.DROP_OLDEST)
+
+    val flow: SharedFlow<List<LiveSource>> get() = iFlow
 }

@@ -125,9 +125,9 @@ fun MenuItemProps.copyFrom(template: MenuItemTemplate) {
 open class MenuItemTemplate(
     val menuId: String,
     val title: String,
-    open val enabled: Boolean,
+    open val enabled: Boolean = true,
     val image: String,
-    val action: (String) -> Unit
+    open val action: (String) -> Unit
 )
 
 open class MenuGroup<T : MenuItemTemplate>(val title: String, val items: List<T>)

@@ -62,7 +62,7 @@ data class RecList(
 val RecList.Recording.duration get() = (endTime90k - startTime90k).toDuration
 val RecList.Recording.fps get() = videoSamples / duration.inWholeSeconds.coerceAtLeast(1)
 val RecList.Recording.storage get() = sampleFileBytes.asSize
-val RecList.Recording.bitrate get() = sampleFileBytes * 8.0 / 1024 / 1024 / duration.inWholeSeconds.coerceAtLeast(1)
+val RecList.Recording.bitrate get() = sampleFileBytes * 8.0 / duration.inWholeSeconds.coerceAtLeast(1)  // rate in bps
 fun RecList.Recording.getStartDate(min: Time90k = startTime90k) = startTime90k.coerceAtLeast(min).formatDate
 fun RecList.Recording.getStartTime(min: Time90k = startTime90k) = startTime90k.coerceAtLeast(min).formatTime
 fun RecList.Recording.getEndTime(max: Time90k = endTime90k) = endTime90k.coerceAtMost(max).formatTime

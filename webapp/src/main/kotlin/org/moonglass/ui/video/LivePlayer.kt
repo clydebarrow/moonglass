@@ -85,7 +85,6 @@ class LivePlayer(props: LivePlayerProps) : RComponent<LivePlayerProps, PlayerSta
                 }
                 srcUrl = URL.createObjectURL(this)
             }
-            Debug.debug("got srcUrl $srcUrl")
             return srcUrl
         }
     }

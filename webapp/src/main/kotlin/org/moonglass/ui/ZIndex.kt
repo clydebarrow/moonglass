@@ -26,6 +26,7 @@ enum class ZIndex() {
     Content,
     NavBar,         // navbar here?
     SideBar,
+    Stats,          // stats window
     Dismisser,      // overlay to dismiss a menu or dialog
     Modal,
     Menu,           // menu on top of standard stuff

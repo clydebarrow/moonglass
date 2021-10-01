@@ -24,15 +24,6 @@ import kotlin.reflect.KClass
 
 object MainMenu {
 
-    private fun onSelected(id: String) {
-        items[id]?.let {
-            if (it.contentComponent == null)
-                Toast.toast("No content implemented for ${it.title}")
-            else
-                App.showContent(it)
-        }
-    }
-
     private val String.camelCase: String
         get() {
             return split(' ').joinToString("") { it.replaceFirstChar { it.uppercase() } }
@@ -57,8 +48,15 @@ object MainMenu {
             title,
             true,
             title.camelCase + ".svg",
-            { onSelected(it) }
-        )
+            { }
+        ) {
+        override val action: (String) -> Unit = {
+            if (contentComponent == null)
+                Toast.toast("No content implemented for ${title}")
+            else
+                App.showContent(this)
+        }
+    }
 
     val menu = listOf(
         MenuGroup(
@@ -71,21 +69,22 @@ object MainMenu {
         MenuGroup(
             "Configuration",
             listOf(
-                MainMenuItem("Cameras"),
-                MainMenuItem("Storage"),
-                MainMenuItem("Users"),
+                MenuItemTemplate("toolsMenu", "Live stats", image = "livestatus.svg") {
+                    App.showSideBar = false
+                    App.showLiveStatus = !App.showLiveStatus
+                },
             )
         )
     )
 
-    private val items = menu.map { it.items }.flatten().map { it.menuId to it }.toMap()
+    private val items: Map<String, MenuItemTemplate> = menu.map { it.items }.flatten().map { it.menuId to it }.toMap()
 
-    val default get() = menu.first().items.first()
+    val default get() = menu.first().items.first() as MainMenuItem
 
-    fun getItem(id: String): MainMenuItem {
-        val item = items[id]
-        if (item?.contentComponent == null)
-            return default
-        return item
+    fun getItem(id: String?): MainMenuItem {
+        val item = items[id] as? MainMenuItem
+        if (item?.contentComponent != null)
+            return item
+        return default
     }
 }

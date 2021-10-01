@@ -33,10 +33,10 @@ import kotlinx.css.vw
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import org.moonglass.ui.api.Api
-import org.moonglass.ui.user.User
 import org.moonglass.ui.utility.SavedState
 import org.moonglass.ui.utility.StateVar
 import org.moonglass.ui.widgets.Dialog
+import org.moonglass.ui.widgets.LiveStats
 import org.moonglass.ui.widgets.Spinner
 import org.moonglass.ui.widgets.Toast
 import react.Props
@@ -56,6 +56,7 @@ external interface AppState : State {
     var dismissable: Boolean
     var isSideBarShowing: StateVar<Boolean>
     var isContextMenuShowing: StateVar<Boolean>
+    var isLiveStatsShowing: StateVar<Boolean>
     var contextMenuData: ContextMenuData
     var api: Api
 }
@@ -65,7 +66,7 @@ class App() : RComponent<Props, AppState>() {
 
     private fun restoreShowing(): MainMenu.MainMenuItem {
         val old: String? = SavedState.restore(appComponentKey)
-        return old?.let { MainMenu.getItem(it) } ?: MainMenu.default
+        return MainMenu.getItem(old)
     }
 
     override fun AppState.init() {
@@ -73,6 +74,7 @@ class App() : RComponent<Props, AppState>() {
         refreshing = mutableSetOf()
         contentShowing = restoreShowing()
         isSideBarShowing = StateVar(false, this@App)
+        isLiveStatsShowing = StateVar(false, this@App)
         isContextMenuShowing = StateVar(false, this@App)
         contextMenuData = ContextMenuData()
         api = Api()
@@ -143,6 +145,11 @@ class App() : RComponent<Props, AppState>() {
             }
         }
         child(Toast::class) { attrs { } }
+        child(LiveStats::class) {
+            attrs {
+                isShowing = state.isLiveStatsShowing
+            }
+        }
         state.dialogShowing?.let {
             child(it) {
                 attrs {
@@ -205,6 +212,22 @@ class App() : RComponent<Props, AppState>() {
                 }
             }
         }
+
+        var showSideBar: Boolean
+            get() = instance?.state?.isSideBarShowing?.value == true
+            set(value) {
+                instance?.state?.isSideBarShowing?.value = value
+            }
+
+        /**
+         * Control showing of the status overlay
+         */
+
+        var showLiveStatus: Boolean
+            get() = instance?.state?.isLiveStatsShowing?.value == true
+            set(value) {
+                instance?.state?.isLiveStatsShowing?.value = value
+            }
 
         /**
          * Show a modal dialog

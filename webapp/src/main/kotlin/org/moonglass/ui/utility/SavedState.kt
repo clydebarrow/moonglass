@@ -43,6 +43,14 @@ object SavedState {
     }
 
     /**
+     * Get saved state, providing a default value getter
+     */
+
+    inline fun <reified T : Any> String.restore(default: () -> T): T {
+        return restore(this) ?: default()
+    }
+
+    /**
      * Save an object to localstorage
      * @param key The storage key to use
      * @param data The object to save. Must be a serialized type

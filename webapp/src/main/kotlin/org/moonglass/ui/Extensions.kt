@@ -44,6 +44,8 @@ import kotlinx.html.DIV
 import kotlinx.html.js.onClickFunction
 import kotlinx.serialization.decodeFromString
 import org.moonglass.ui.user.UserPreferences
+import org.w3c.dom.events.EventListener
+import org.w3c.dom.events.MouseEvent
 import react.Props
 import react.RBuilder
 import react.RComponent
@@ -191,6 +193,22 @@ val Long.asSize: String
         return Extensions.sizes.let { sizes ->
             (sizes.firstOrNull { (this / it.value).toInt() in (1..999) } ?: sizes.last()).format(this.toDouble())
         }
+    }
+
+val Double.asBitRate: String
+    get() {
+        val unit: String
+        val value: Double
+        if (this < 500000) {
+            unit = "kbps"
+            value = this / 1024
+        } else {
+            unit = "Mbps"
+            value = this / 1024 / 1024
+        }
+        val bitwhole = value.toInt()
+        val bitfrac = ((value - bitwhole.toDouble()) * 10).roundToInt()
+        return "$bitwhole.$bitfrac $unit"
     }
 
 //const val timePattern = "dd mmm yyyy HH:MM:ss"

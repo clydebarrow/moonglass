@@ -39,7 +39,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import org.moonglass.ui.Debug
 import org.moonglass.ui.Duration90k
 import org.moonglass.ui.Time90k
 import org.moonglass.ui.api.apiConfig
@@ -47,10 +46,13 @@ import org.moonglass.ui.widgets.Toast
 import org.moonglass.ui.widgets.recordings.Stream
 import org.w3c.dom.mediasource.MediaSource
 import kotlin.collections.set
+import kotlin.js.Date
 
 
 /**
- * A class that receives data from a websocket and streams it into a mediasource.
+ * A class that receives data from a websocket and streams via a Kotlin flow to be consumed by one ore more
+ * mediasource objects.
+ *
  * @param stream The stream to use
  *
  */
@@ -121,7 +123,6 @@ class LiveSource(private val stream: Stream) : VideoSource {
                 val buffer = ByteBuffer(message.data)
                 val data = buffer.parseBuffer()
                 contentType = data.contentType
-                Debug.debug("Got content type $contentType")
                 if (!MediaSource.isTypeSupported(contentType)) {
                     Toast.toast("Media type $contentType not supported")
                     throw IllegalArgumentException("Media type not supported")
@@ -153,7 +154,6 @@ class LiveSource(private val stream: Stream) : VideoSource {
     private fun open() {
         if (job == null)
             job = scope.launch {
-                Debug.debug("Opening flow $caption")
                 flow.emit(getInitializationSegment())
                 readSocket {
                     try {
@@ -161,6 +161,7 @@ class LiveSource(private val stream: Stream) : VideoSource {
                             val message = incoming.receive()
                             val data = message.data.stripHeaders()
                             flow.emit(Data(contentType, data))
+                            updateStats(data.size)
                         }
                     } catch (ex: Exception) {
                         console.log("$caption: $ex")
@@ -173,7 +174,6 @@ class LiveSource(private val stream: Stream) : VideoSource {
      * End the streaming.
      */
     private fun close() {
-        Debug.debug("Closing flow $caption")
         try {
             job?.cancel()
             job = null
@@ -219,7 +219,35 @@ class LiveSource(private val stream: Stream) : VideoSource {
         }
     }
 
-    private var clientCount: Int = 0
+    var clientCount: Int = 0
+        private set
+
+    /**
+     * Accumulate statistics
+     *
+     */
+    var totalBytes: Long = 0L    // total number of bytes streamed
+        private set
+    var rate: Double = 0.0       // Latest available data rate in bytes/sec
+        private set
+    private var lastTime: Double = 0.0     // the last time we saw data
+
+    /**
+     * Update the stats
+     */
+    private fun updateStats(size: Int) {
+        totalBytes += size
+        val now = Date().getTime()
+        if (lastTime != 0.0 && now != lastTime) {
+            val thisRate = size.toDouble() / (now - lastTime) * 1000.0
+            if (rate == 0.0)
+                rate = thisRate
+            else {
+                rate = rate * (1 - SMOOTHING) + thisRate * SMOOTHING
+            }
+        }
+        lastTime = now
+    }
 
     init {
         // listen for changes in subscriber count, open/close the websocket as required.
@@ -231,6 +259,7 @@ class LiveSource(private val stream: Stream) : VideoSource {
             else
                 open()
             clientCount = it
+            LiveSourceFactory.updateFlow()
         }.launchIn(scope)
     }
 
@@ -287,5 +316,6 @@ class LiveSource(private val stream: Stream) : VideoSource {
     companion object {
         const val MAX_BUFFER = 5
         const val MAX_TIME = 6 * 60       // don't buffer more than 5 minutes
+        const val SMOOTHING = 0.1           // use this factor for smoothing data rates
     }
 }
