@@ -37,6 +37,7 @@ import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
 import kotlinx.css.flexWrap
 import kotlinx.css.fontWeight
+import kotlinx.css.height
 import kotlinx.css.justifyContent
 import kotlinx.css.marginRight
 import kotlinx.css.opacity
@@ -175,7 +176,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                 }
                 +"${stream.metaData.fsBytes.asSize} / ${stream.metaData.retainBytes.asSize}"
             }
-            styledImg(src = "/images/liveView.svg") {
+            styledImg(src = "/images/camera.svg") {
                 attrs {
                     if (stream.metaData.record)
                         onClickFunction = {
@@ -185,6 +186,8 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                         }
                 }
                 css {
+                    width = 16.px
+                    height = 16.px
                     if (!stream.metaData.record)
                         opacity = 0.3
                     else

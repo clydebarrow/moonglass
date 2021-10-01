@@ -43,6 +43,7 @@ import kotlinx.css.zIndex
 import kotlinx.html.DIV
 import kotlinx.html.js.onClickFunction
 import kotlinx.serialization.decodeFromString
+import org.moonglass.ui.user.UserPreferences
 import react.Props
 import react.RBuilder
 import react.RComponent
@@ -194,12 +195,7 @@ val Long.asSize: String
 
 //const val timePattern = "dd mmm yyyy HH:MM:ss"
 val Date.formatDate: String
-    get() {
-        val day = getDate().digits(2)
-        val month = toLocaleString("default", dateLocaleOptions { month = "short" })
-        val year = getFullYear().toString()
-        return listOf(day, month, year).joinToString(" ")
-    }
+    get() = UserPreferences.current.dateFormat.run { format() }
 
 val Date.formatHHMM: String
     get() {
@@ -209,12 +205,7 @@ val Date.formatHHMM: String
     }
 
 val Date.formatTime: String
-    get() {
-        val hours = getHours().digits(2)
-        val minutes = getMinutes().digits(2)
-        val seconds = getSeconds().digits(2)
-        return listOf(hours, minutes, seconds).joinToString(":")
-    }
+    get() = UserPreferences.current.timeFormat.run { format() }
 
 val Time90k.formatDate get() = asDate.formatDate
 val Time90k.formatTime get() = asDate.formatTime

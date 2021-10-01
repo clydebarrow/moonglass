@@ -25,7 +25,7 @@ import kotlin.reflect.KClass
 object MainMenu {
 
     private fun onSelected(id: String) {
-        getItem(id)?.let {
+        items[id]?.let {
             if (it.contentComponent == null)
                 Toast.toast("No content implemented for ${it.title}")
             else
@@ -83,8 +83,8 @@ object MainMenu {
     val default get() = menu.first().items.first()
 
     fun getItem(id: String): MainMenuItem {
-        val item =  items[id]
-        if(item?.contentComponent == null)
+        val item = items[id]
+        if (item?.contentComponent == null)
             return default
         return item
     }

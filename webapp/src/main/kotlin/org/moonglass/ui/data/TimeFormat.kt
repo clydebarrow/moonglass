@@ -40,10 +40,11 @@ enum class TimeFormat(val description: String) {
                 if (it == 0) 12 else it
             }.digits(2)
             val minutes = getMinutes().digits(2)
-            return "$hour:$minutes$ampm"
+            return "$hour:$minutes $ampm"
         }
     };
 
     abstract fun Date.format(): String
+    override fun toString(): String = description
 
 }

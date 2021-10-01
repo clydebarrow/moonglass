@@ -49,6 +49,8 @@ object SavedState {
      */
     inline fun <reified T : Any> save(key: String, data: T) {
         try {
+            val str = Json.encodeToString(data)
+            console.log("Saving key $key -> $data")
             window.localStorage.setItem(key, Json.encodeToString(data))
         } catch (ex: Exception) {
             console.log("${ex.message}, $data")

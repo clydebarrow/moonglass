@@ -17,6 +17,7 @@
 package org.moonglass.ui
 
 import kotlinx.css.Color
+import org.moonglass.ui.user.UserPreferences
 
 /*
 Site them variables
@@ -117,7 +118,7 @@ object Theme {
         open val isDark: Boolean = false
     }
 
-    var current: Mode = Mode.values().last()
+    val current: Mode get() = UserPreferences.current.theme
 
     operator fun invoke() = current
 }

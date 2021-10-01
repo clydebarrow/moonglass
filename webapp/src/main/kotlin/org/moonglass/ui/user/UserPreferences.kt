@@ -16,26 +16,48 @@
 
 package org.moonglass.ui.user
 
+import kotlinx.serialization.Serializable
 import org.moonglass.ui.ModalProps
 import org.moonglass.ui.Theme
 import org.moonglass.ui.data.DateFormat
 import org.moonglass.ui.data.TimeFormat
+import org.moonglass.ui.utility.SavedState
 import org.moonglass.ui.widgets.Dialog
 
-object UserPreferences {
-
-    var mode: Theme.Mode = Theme.Mode.values().first()
+@Serializable
+class UserPreferences {
+    var theme: Theme.Mode = Theme.Mode.values().first()
     var dateFormat = DateFormat.values().first()
     var timeFormat = TimeFormat.values().first()
 
+    companion object {
+        const val saveKey = "userPreferences"
+        var current = SavedState.restore(saveKey) ?: UserPreferences()
+
+        operator fun invoke() = current
+
+        fun save() {
+            SavedState.save(saveKey, current)
+        }
+    }
+
     class PreferencesDialog(props: ModalProps) : Dialog(props) {
         override val title: String = "User preferences"
-        override val okText: String = "Close"
+        override val okText: String = "Save"
 
-        private val display = SelectEntry("Display mode", Theme.Mode.values().toList(), mode)
-        private val date = SelectEntry("Date Format", DateFormat.values().toList(), defaultValue = dateFormat)
-        private val time = SelectEntry("Time Format", TimeFormat.values().toList(), timeFormat)
+        private val themeSelect = SelectEntry("Display mode", Theme.Mode.values().toList(), current.theme)
+        private val dateSelect =
+            SelectEntry("Date Format", DateFormat.values().toList(), defaultValue = current.dateFormat)
+        private val timeSelect = SelectEntry("Time Format", TimeFormat.values().toList(), current.timeFormat)
 
-        override val items: List<Entry> = listOf(display, date, time)
+        override val items: List<Entry> = listOf(themeSelect, dateSelect, timeSelect)
+
+        override fun onSubmit() {
+            current.theme = themeSelect.enumValue
+            current.dateFormat = dateSelect.enumValue
+            current.timeFormat = timeSelect.enumValue
+            save()
+            super.onSubmit()
+        }
     }
 }

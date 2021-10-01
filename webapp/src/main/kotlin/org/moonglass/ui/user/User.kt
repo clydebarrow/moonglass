@@ -42,6 +42,9 @@ object User {
         MenuItemTemplate("editProfile", "Edit profile", true, "profile.svg") {
             action(it)
         },
+        MenuItemTemplate("userPreferences", "Preferences", true, "settings.svg") {
+            App.showDialog(UserPreferences.PreferencesDialog::class)
+        },
         object : MenuItemTemplate("logout", "Log out", true, "logout.svg", {
             App.session?.csrf?.let {
                 MainScope().launch {
@@ -60,7 +63,7 @@ object User {
 
 
         override val title: String = "Login required"
-        override val okText: String = "Submit"
+        override val okText: String = "Login"
 
         override fun onSubmit() {
             MainScope().launch {

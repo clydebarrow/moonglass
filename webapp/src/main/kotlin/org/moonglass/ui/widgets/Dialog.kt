@@ -67,7 +67,6 @@ import org.w3c.dom.events.Event
 import react.State
 import react.dom.KeyboardEvent
 import react.dom.attrs
-import react.dom.col
 import react.dom.defaultValue
 import react.dom.onKeyPress
 import react.dom.option
@@ -87,7 +86,7 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
      * An entry in the dialog.
      */
 
-    inner open class Entry(val text: String, val inputType: InputType, val defaultValue: String = "") {
+    open inner class Entry(val text: String, val inputType: InputType, val defaultValue: String = "") {
         val key = text.replace(" ", "").lowercase()
 
         var value: String
@@ -113,7 +112,7 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
         }
     }
 
-    inner class SelectEntry<T : Enum<T>>(text: String, val choices: List<T>, defaultValue: T = choices.first()) :
+    inner class SelectEntry<T : Enum<T>>(text: String, private val choices: List<T>, defaultValue: T = choices.first()) :
         Entry(text, InputType.text, defaultValue.name) {
 
         /**
@@ -123,7 +122,7 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
             get() = choices.first { it.name == value }
 
         override fun StyledDOMBuilder<*>.render(block: StyledDOMBuilder<*>.() -> Unit) {
-            styledSelect() {
+            styledSelect {
                 block()
                 attrs {
                     value = this@SelectEntry.value
@@ -182,6 +181,9 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
         SavedState.save(saveKey, cleanData())
     }
 
+    override fun DialogState.init(props: ModalProps) {
+        isValid = validate()
+    }
     private fun keyDown(event: KeyboardEvent<*>) {
         event.apply {
             when (key) {
