@@ -58,6 +58,7 @@ import org.moonglass.ui.Modal
 import org.moonglass.ui.ModalProps
 import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
+import org.moonglass.ui.applyState
 import org.moonglass.ui.cardStyle
 import org.moonglass.ui.name
 import org.moonglass.ui.utility.SavedState
@@ -181,9 +182,16 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
         SavedState.save(saveKey, cleanData())
     }
 
-    override fun DialogState.init(props: ModalProps) {
-        isValid = validate()
+    override fun componentDidMount() {
+        applyState {
+            isValid = validate()
+        }
     }
+
+    override fun DialogState.init(props: ModalProps) {
+        isValid = false
+    }
+
     private fun keyDown(event: KeyboardEvent<*>) {
         event.apply {
             when (key) {
@@ -199,6 +207,7 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
     }
 
     override fun StyledDOMBuilder<DIV>.renderInner() {
+
         // use a form so we can legally enclose input fields
         styledForm {
             attrs {
@@ -323,9 +332,12 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
         }
     }
 
+    /**
+     * Get a copy of the input data to preserve. Filter out passwords
+     */
     private fun cleanData(): SavedData {
-        val passwords = items.filter { it.inputType != InputType.password }.map { it.key }.toSet()
-        return SavedData(inputData.filterKeys { (it in passwords) })
+        val nonPasswords = items.filter { it.inputType != InputType.password }.map { it.key }.toSet()
+        return SavedData(inputData.filterKeys { (it in nonPasswords) })
     }
 
     @Serializable

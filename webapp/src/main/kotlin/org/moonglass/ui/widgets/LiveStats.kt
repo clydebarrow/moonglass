@@ -31,6 +31,8 @@ import kotlinx.css.textAlign
 import kotlinx.css.top
 import kotlinx.css.zIndex
 import kotlinx.html.DIV
+import kotlinx.html.js.onClickFunction
+import org.moonglass.ui.App
 import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.asBitRate
@@ -44,6 +46,7 @@ import react.Props
 import react.RBuilder
 import react.RComponent
 import react.State
+import react.dom.attrs
 import react.setState
 import styled.StyledDOMBuilder
 import styled.css
@@ -89,14 +92,17 @@ class LiveStats : RComponent<LiveStatsProps, LiveStatsState>() {
 
     private fun startStop(yes: Boolean) {
         if (yes) {
-            if (job == null)
+            if (job == null) {
                 job = scope.launch {
                     LiveSourceFactory.flow.collect {
                         forceUpdate()
                     }
                 }
-        } else
+            }
+        } else {
             job?.cancel()
+            job = null
+        }
     }
 
     override fun componentDidMount() {
@@ -111,6 +117,7 @@ class LiveStats : RComponent<LiveStatsProps, LiveStatsState>() {
     private fun saveMyStuff() {
         SavedState.save(saveKey, state.position)
     }
+
     override fun componentWillUnmount() {
         startStop(false)
         scope.cancel()      // also cancels the dragger
@@ -130,12 +137,15 @@ class LiveStats : RComponent<LiveStatsProps, LiveStatsState>() {
     }
 
     private fun StyledDOMBuilder<DIV>.columnHeader(text: String) {
-        cell(text, TextAlign.center, Theme().header.backgroundColor)
+        cell(text, TextAlign.right, Theme().header.backgroundColor)
     }
 
     override fun RBuilder.render() {
         startStop(props.isShowing.value)
         styledDiv {
+            attrs {
+                onClickFunction = { App.showLiveStatus = false }
+            }
             dragger.attach(attrs)
             cardStyle()
             css {
@@ -145,7 +155,7 @@ class LiveStats : RComponent<LiveStatsProps, LiveStatsState>() {
                 else
                     Display.none
                 justifyContent = JustifyContent.center
-                gridTemplateColumns = GridTemplateColumns(columns.joinToString(" ") { "minmax(8rem, max-content)" })
+                gridTemplateColumns = GridTemplateColumns(columns.joinToString(" ") { "minmax(6rem, max-content)" })
                 position = Position.absolute
                 top = state.position.y.px
                 left = state.position.x.px

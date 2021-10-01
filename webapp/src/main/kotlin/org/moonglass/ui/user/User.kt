@@ -61,6 +61,7 @@ object User {
 
     class LoginDialog(props: ModalProps) : Dialog(props) {
 
+        override val dismissOutside: Boolean = false        // only buttons will close
 
         override val title: String = "Login required"
         override val okText: String = "Login"

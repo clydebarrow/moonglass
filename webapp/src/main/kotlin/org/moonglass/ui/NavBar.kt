@@ -18,6 +18,7 @@ package org.moonglass.ui
 
 import kotlinx.css.Align
 import kotlinx.css.CssBuilder
+import kotlinx.css.Cursor
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.FlexWrap
@@ -38,6 +39,7 @@ import kotlinx.css.borderColor
 import kotlinx.css.borderRadius
 import kotlinx.css.color
 import kotlinx.css.content
+import kotlinx.css.cursor
 import kotlinx.css.display
 import kotlinx.css.flex
 import kotlinx.css.flexDirection
@@ -145,7 +147,11 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
 
             // left side of navbar, has icon, title and menu widget in smaller modes
             styledDiv {
+                attrs {
+                    onClick = { props.isSideBarShowing.value = !props.isSideBarShowing() }
+                }
                 css {
+                    cursor = Cursor.pointer
                     flexGrow = 0.0
                     display = Display.flex
                     flexDirection = FlexDirection.row
@@ -159,9 +165,6 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                 }
 
                 styledSpan {
-                    attrs {
-                        onClick = { props.isSideBarShowing.value = !props.isSideBarShowing() }
-                    }
                     css {
                         if (ResponsiveLayout.current.mobile)
                             display = Display.none
@@ -204,9 +207,6 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                                 rotate((-45).deg)
                             }
                         }
-                    }
-                    attrs {
-                        onClick = { props.isSideBarShowing.value = !props.isSideBarShowing() }
                     }
                 }
             }

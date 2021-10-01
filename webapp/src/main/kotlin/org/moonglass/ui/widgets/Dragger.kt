@@ -14,6 +14,7 @@ import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
+import kotlin.experimental.and
 import kotlin.math.abs
 
 /**
@@ -94,9 +95,11 @@ class Dragger(private var current: ScreenPosition, private val scope: CoroutineS
     }
 
     private fun down(event: Event) {
-        event.stopPropagation()
-        event.preventDefault()
         event.unsafeCast<react.dom.MouseEvent<HTMLCanvasElement, MouseEvent>>().let { mouseEvent ->
+            if(mouseEvent.button != 0)      // only left button initiates drag
+                return
+            event.stopPropagation()
+            event.preventDefault()
             lastX = mouseEvent.clientX.toInt()
             lastY = mouseEvent.clientY.toInt()
             document.addEventListener("mousemove", moveFun)
@@ -116,6 +119,11 @@ class Dragger(private var current: ScreenPosition, private val scope: CoroutineS
 
     private fun move(event: Event) {
         event as MouseEvent
+        // check left button is still down, finish if not
+        if((event.buttons.toInt() and 1) == 0) {
+            up(event)
+            return
+        }
         element?.let { el ->
             current = current.update(el, event.clientX - lastX, event.clientY - lastY)
             el.style.left = "${current.x}px"
