@@ -31,7 +31,7 @@ import kotlinx.css.textAlign
 import kotlinx.css.top
 import kotlinx.css.zIndex
 import kotlinx.html.DIV
-import kotlinx.html.js.onClickFunction
+import kotlinx.html.js.onDoubleClickFunction
 import org.moonglass.ui.App
 import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
@@ -144,7 +144,7 @@ class LiveStats : RComponent<LiveStatsProps, LiveStatsState>() {
         startStop(props.isShowing.value)
         styledDiv {
             attrs {
-                onClickFunction = { App.showLiveStatus = false }
+                onDoubleClickFunction = { App.showLiveStatus = false }
             }
             dragger.attach(attrs)
             cardStyle()
