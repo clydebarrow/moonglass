@@ -87,11 +87,11 @@ class MenuItem(props: MenuItemProps) : RComponent<MenuItemProps, State>(props) {
                 onClickFunction = { props.action(props.menuId) }
             }
             if (props.image.isNotBlank())
-                styledImg(src = props.image) {
+                styledImg {
+                    fallbackPng(props.image, 16.px)
                     css {
                         marginRight = 0.25.rem
                         display = Display.inline
-                        height = 16.px
                     }
                 }
             +props.title

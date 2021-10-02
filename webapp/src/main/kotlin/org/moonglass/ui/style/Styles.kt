@@ -42,6 +42,7 @@ import kotlinx.css.width
 import kotlinx.html.InputType
 import kotlinx.html.id
 import kotlinx.html.js.onClickFunction
+import org.moonglass.ui.fallbackPng
 import org.moonglass.ui.utility.StateVar
 import org.w3c.dom.events.Event
 import react.RBuilder
@@ -88,14 +89,14 @@ fun StyledDOMBuilder<*>.shrinkable(expanded: Boolean, maxHeight: LinearDimension
  * @param onClick Called when the button is clicked. Optional.
  */
 fun StyledDOMBuilder<*>.expandButton(expanded: Boolean, onClick: ((Event) -> Unit)? = null) {
-    styledImg(src = "/images/play.svg") {
+    styledImg {
+        fallbackPng("/images/play.svg", 20.px)
         attrs {
             onClick?.also { onClickFunction = it }
         }
         css {
             cursor = Cursor.pointer
             transition("all", 300.ms)
-            width = 20.px
             if (expanded)
                 transform { rotate(90.deg) }
         }

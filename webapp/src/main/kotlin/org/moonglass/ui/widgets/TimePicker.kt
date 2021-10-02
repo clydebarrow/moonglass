@@ -60,6 +60,7 @@ import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.applyState
 import org.moonglass.ui.dismisser
+import org.moonglass.ui.fallbackPng
 import org.w3c.dom.CENTER
 import org.w3c.dom.CanvasLineCap
 import org.w3c.dom.CanvasRenderingContext2D
@@ -196,14 +197,14 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
      */
 
     private fun plusMinus(c: Char) {
-        val increment = when(c) {
+        val increment = when (c) {
             '+' -> 1
             '-' -> -1
             else -> return
         }
         when (state.cursorPos) {
-            0,1 -> setHours(state.hours + increment)
-            2,3 -> setMinutes(state.minutes + increment)
+            0, 1 -> setHours(state.hours + increment)
+            2, 3 -> setMinutes(state.minutes + increment)
         }
     }
 
@@ -306,7 +307,8 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
 
 
     fun StyledDOMBuilder<DIV>.arrow(up: Boolean, onClick: (Boolean) -> Unit) {
-        styledImg(src = "/images/triangle.svg") {
+        styledImg {
+            fallbackPng("/images/triangle.svg", 16.px)
             attrs {
                 onClickFunction = { onClick(up) }
             }
@@ -421,7 +423,7 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
     }
 
     override fun RBuilder.render() {
-        fun compose(z: Int?  = null) = styledDiv {
+        fun compose(z: Int? = null) = styledDiv {
             css {
                 display = Display.flex
                 position = Position.relative

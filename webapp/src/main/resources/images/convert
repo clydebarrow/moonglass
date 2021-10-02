@@ -1,0 +1,7 @@
+for i in *.svg ; do
+    width=`php /Volumes/User/clyde/dev/projects/bluemax/resources/width.php $i`
+    fname=`basename $i .svg`
+    echo $fname $width
+    rm -f $fname.png
+    svgexport $i $fname.png $width:$width
+done

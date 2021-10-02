@@ -20,12 +20,14 @@ import kotlinx.browser.window
 import kotlinx.coroutines.await
 import kotlinx.css.Color
 import kotlinx.css.Display
+import kotlinx.css.LinearDimension
 import kotlinx.css.PointerEvents
 import kotlinx.css.Position
 import kotlinx.css.backgroundColor
 import kotlinx.css.borderRadius
 import kotlinx.css.bottom
 import kotlinx.css.display
+import kotlinx.css.height
 import kotlinx.css.left
 import kotlinx.css.margin
 import kotlinx.css.opacity
@@ -39,13 +41,13 @@ import kotlinx.css.rem
 import kotlinx.css.rgba
 import kotlinx.css.right
 import kotlinx.css.top
+import kotlinx.css.width
 import kotlinx.css.zIndex
 import kotlinx.html.DIV
+import kotlinx.html.IMG
 import kotlinx.html.js.onClickFunction
 import kotlinx.serialization.decodeFromString
 import org.moonglass.ui.user.UserPreferences
-import org.w3c.dom.events.EventListener
-import org.w3c.dom.events.MouseEvent
 import react.Props
 import react.RBuilder
 import react.RComponent
@@ -308,3 +310,13 @@ fun RBuilder.dismisser(
     }
 }
 
+
+fun StyledDOMBuilder<IMG>.fallbackPng(image: String, size: LinearDimension) {
+    css {
+        height = size
+        width = size
+    }
+    attrs {
+        src = image.replace(".svg", ".png")     // TODO This is just because the Moonfire http server doesn't like svg
+    }
+}

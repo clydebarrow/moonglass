@@ -1,10 +1,10 @@
-## Moonglass
+# Moonglass
 
-### A front end for the Moonfire NVR
+## A front end for the Moonfire NVR
 
 This is a work in progress, but is basically functional.
 
-#### To run the web app as a development server:
+## To run the web app as a development server:
 
 * clone this repository - `git clone https://github.com/clydebarrow/moonglass.git`
 * cd into `moonglass/webapp`
@@ -22,7 +22,36 @@ gradlew browserDevelopmentRun --continuous
 ````
 A browser window should open, presenting the UI.
 
-#### To install onto the NVR server
+## To install onto the NVR server
+
+There are two ways of doing this.
+
+### Replace the docker image
+
+Edit the `nvr` script created during installation of Moonfire-nvr. Locate the line like:
+
+````
+image_name="scottlamb/moonfire-nvr:v0.6.6"
+````
+
+Replace this with:
+
+````
+image_name="clydeps/moonglass:0.1.0"
+````
+
+Stop the nvr, remove the container and restart:
+
+````
+nvr stop
+docker rm moonfire-nvr
+nvr run
+````
+
+Reload the UI from localhost:8080 (or wherever it is served from.) Enjoy.
+
+
+### Using a proxy server
 
 You will need to set up a proxy server - nginx is recommended.
 The Moonglass production files need to be copied to the NVR server - you can automate this by

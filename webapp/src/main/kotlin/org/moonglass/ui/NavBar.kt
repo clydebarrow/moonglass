@@ -238,21 +238,13 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                         if (imgSrc != null)
                             src = imgSrc
                         else
-                            src = "/images/profile.svg"
+                            fallbackPng("/images/profile.svg", 3.rem)
                     }
                     css {
-                        before {
-                            content = QuotedString(" ")
-                            display = Display.block
-                            position = Position.absolute
-                            height = 3.rem
-                            width = 3.rem
-                            backgroundImage = Image("/images/profile.svg")
-                        }
-                        height = 3.rem
                         display = Display.flex
                         alignContent = Align.start
                         width = LinearDimension.auto
+                        height = 3.rem
                         margin(right = 0.5.rem)
                         if (imgSrc != null)
                             borderRadius = 25.pct

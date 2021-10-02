@@ -76,8 +76,8 @@ data class Api(
         val id: Int = 0,
         val days: Map<String, Day> = mapOf(),
         val fsBytes: Long, // 38785380352
-        val maxEndTime90k: Long, // 146704410690765
-        val minStartTime90k: Long, // 146678775676182
+        val maxEndTime90k: Long?, // 146704410690765
+        val minStartTime90k: Long?, // 146678775676182
         val record: Boolean, // true
         val retainBytes: Long, // 107374182400
         val totalDuration90k: Long, // 24637266927

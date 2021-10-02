@@ -63,6 +63,7 @@ import org.moonglass.ui.api.getStartTime
 import org.moonglass.ui.api.storage
 import org.moonglass.ui.asBitRate
 import org.moonglass.ui.asSize
+import org.moonglass.ui.fallbackPng
 import org.moonglass.ui.name
 import org.moonglass.ui.style.column
 import org.moonglass.ui.style.expandButton
@@ -72,7 +73,6 @@ import org.moonglass.ui.tooltip
 import org.moonglass.ui.video.LiveSource
 import org.moonglass.ui.video.LiveSourceFactory
 import org.moonglass.ui.video.RecordingSource
-import org.moonglass.ui.video.VideoSource
 import react.Props
 import react.RBuilder
 import react.RComponent
@@ -84,7 +84,6 @@ import styled.styledA
 import styled.styledButton
 import styled.styledDiv
 import styled.styledImg
-import kotlin.math.roundToInt
 
 /**
  * Present a list of cameras and their streams, expandable to show recordings for each stream.
@@ -177,7 +176,8 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                 }
                 +"${stream.metaData.fsBytes.asSize} / ${stream.metaData.retainBytes.asSize}"
             }
-            styledImg(src = "/images/camera.svg") {
+            styledImg {
+                fallbackPng("/images/camera.svg", 16.px)
                 attrs {
                     if (stream.metaData.record)
                         onClickFunction = {
@@ -187,8 +187,6 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                         }
                 }
                 css {
-                    width = 16.px
-                    height = 16.px
                     if (!stream.metaData.record)
                         opacity = 0.3
                     else
@@ -242,7 +240,9 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                             display = Display.flex
                             width = LinearDimension.auto
                         }
-                        styledImg(src = "/images/download.svg") { }
+                        styledImg {
+                            fallbackPng("/images/download.svg", 16.px)
+                        }
                     }
                 }
             }
