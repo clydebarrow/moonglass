@@ -55,6 +55,7 @@ import kotlinx.datetime.Clock
 import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.name
+import org.moonglass.ui.useColorSet
 import org.moonglass.ui.utility.Timer
 import react.Props
 import react.RBuilder
@@ -134,8 +135,7 @@ class Toast : RComponent<Props, ToastState>() {
                 left = 50.pct
                 transform { translate(-50.pct, 0.pct) }
                 bottom = 20.vh
-                backgroundColor = Theme().notifications.backgroundColor
-                color = Theme().notifications.textColor
+                useColorSet(Theme().notifications)
                 borderWidth = 1.px
                 borderColor = Theme().borderColor
                 borderRadius = 10.px

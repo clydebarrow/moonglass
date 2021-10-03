@@ -29,7 +29,6 @@ import kotlinx.css.color
 import kotlinx.css.display
 import kotlinx.css.fontSize
 import kotlinx.css.fontWeight
-import kotlinx.css.height
 import kotlinx.css.justifyContent
 import kotlinx.css.letterSpacing
 import kotlinx.css.marginRight
@@ -88,7 +87,7 @@ class MenuItem(props: MenuItemProps) : RComponent<MenuItemProps, State>(props) {
             }
             if (props.image.isNotBlank())
                 styledImg {
-                    fallbackPng(props.image, 16.px)
+                    imageSrc(props.image, 16.px)
                     css {
                         marginRight = 0.25.rem
                         display = Display.inline

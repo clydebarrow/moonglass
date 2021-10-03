@@ -60,7 +60,8 @@ import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.applyState
 import org.moonglass.ui.dismisser
-import org.moonglass.ui.fallbackPng
+import org.moonglass.ui.imageSrc
+import org.moonglass.ui.useColorSet
 import org.w3c.dom.CENTER
 import org.w3c.dom.CanvasLineCap
 import org.w3c.dom.CanvasRenderingContext2D
@@ -142,10 +143,9 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
     private val digitRefs = Array(4) { createRef<HTMLSpanElement>() }
     private val canvasRef = createRef<HTMLCanvasElement>()
 
-    val TimePickerState.isPm: Boolean get() = hours >= 12
     val TimePickerState.onHours: Boolean get() = cursorPos < 2
-    val TimePickerState.hourRange get() = if (props.use24HourTime) (0..23) else (0..12)
-    val TimePickerState.hourSpan get() = hourRange.let { it.last - it.first + 1 }
+    val hourRange get() = if (props.use24HourTime) (0..23) else (0..12)
+    val hourSpan get() = hourRange.let { it.last - it.first + 1 }
 
 
     override fun TimePickerState.init(props: TimePickerProps) {
@@ -308,7 +308,7 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
 
     fun StyledDOMBuilder<DIV>.arrow(up: Boolean, onClick: (Boolean) -> Unit) {
         styledImg {
-            fallbackPng("/images/triangle.svg", 16.px)
+            imageSrc("/images/triangle.svg", 16.px)
             attrs {
                 onClickFunction = { onClick(up) }
             }
@@ -371,7 +371,7 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
                 onClickFunction = { clockProps.onSelect((it.getRadial() * range).roundToInt()) }
             }
             css {
-                backgroundColor = Theme().header.backgroundColor
+                useColorSet(Theme().header)
                 borderColor = Theme().header.textColor
                 borderWidth = 1.px
                 borderRadius = clockRadius.px
@@ -450,7 +450,7 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
                 clockFace {
                     attrs {
                         if (state.onHours) {
-                            range = state.hourRange
+                            range = hourRange
                             value = state.hours
                             onSelect = {
                                 setHours(it)

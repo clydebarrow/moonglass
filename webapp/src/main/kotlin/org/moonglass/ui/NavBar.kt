@@ -23,22 +23,18 @@ import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.FlexWrap
 import kotlinx.css.Grow
-import kotlinx.css.Image
 import kotlinx.css.JustifyContent
 import kotlinx.css.JustifyItems
 import kotlinx.css.LinearDimension
 import kotlinx.css.Position
-import kotlinx.css.QuotedString
 import kotlinx.css.TextTransform
 import kotlinx.css.alignContent
 import kotlinx.css.alignItems
 import kotlinx.css.backgroundColor
-import kotlinx.css.backgroundImage
 import kotlinx.css.borderBottomWidth
 import kotlinx.css.borderColor
 import kotlinx.css.borderRadius
 import kotlinx.css.color
-import kotlinx.css.content
 import kotlinx.css.cursor
 import kotlinx.css.display
 import kotlinx.css.flex
@@ -238,7 +234,7 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                         if (imgSrc != null)
                             src = imgSrc
                         else
-                            fallbackPng("/images/profile.svg", 3.rem)
+                            imageSrc("/images/profile.svg", 3.rem)
                     }
                     css {
                         display = Display.flex

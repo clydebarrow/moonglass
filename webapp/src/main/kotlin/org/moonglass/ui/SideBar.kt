@@ -97,7 +97,7 @@ class SideBar : RComponent<SideBarProps, State>() {
                 borderStyle = BorderStyle.solid
                 borderColor = Theme().borderColor
                 zIndex = ZIndex.SideBar()
-                backgroundColor = Theme().content.backgroundColor
+                useColorSet(Theme().content)
                 transition("all", 0.3.s)
             }
             child(Menu::class) {
@@ -121,7 +121,7 @@ class SideBar : RComponent<SideBarProps, State>() {
                 display = Display.flex
                 flexDirection = FlexDirection.column
                 flexWrap = FlexWrap.wrap
-                backgroundColor = Theme().content.backgroundColor
+                useColorSet(Theme().content)
                 padding = Media.padding(6)
             }
         }

@@ -50,6 +50,8 @@ object LiveSourceFactory {
 
     /**
      * Update the sources state
+     * TODO rather than having the 2 sec update flow running continuously, it should be possible to merge
+     * the hot and cold flows in such a way that the cold flow is paused when there are no subscribers.
      */
     fun updateFlow() {
         if (timerJob == null) {

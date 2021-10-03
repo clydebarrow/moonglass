@@ -59,6 +59,7 @@ import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.applyState
 import org.moonglass.ui.name
+import org.moonglass.ui.useColorSet
 import org.moonglass.ui.utility.SavedState
 import org.moonglass.ui.video.LivePlayer
 import org.moonglass.ui.video.LiveSourceFactory
@@ -88,8 +89,7 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
         }
         styledSelect {
             css {
-                backgroundColor = Theme().content.backgroundColor
-                color = Theme().content.textColor
+                useColorSet(Theme().content)
             }
             attrs {
                 value = state.layoutState.current

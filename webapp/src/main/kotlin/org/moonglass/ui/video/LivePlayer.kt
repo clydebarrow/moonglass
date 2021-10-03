@@ -21,12 +21,11 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.css.LinearDimension
-import kotlinx.css.backgroundColor
 import kotlinx.css.height
 import kotlinx.css.pct
 import kotlinx.css.width
-import org.moonglass.ui.Debug
 import org.moonglass.ui.Theme
+import org.moonglass.ui.useColorSet
 import org.w3c.dom.HTMLVideoElement
 import org.w3c.dom.mediasource.AppendMode
 import org.w3c.dom.mediasource.MediaSource
@@ -196,7 +195,7 @@ class LivePlayer(props: LivePlayerProps) : RComponent<LivePlayerProps, PlayerSta
         styledVideo {
             ref = videoRef
             css {
-                backgroundColor = Theme().content.backgroundColor
+                useColorSet(Theme().content)
                 width = 100.pct
                 height = props.height ?: 100.pct
             }
@@ -207,9 +206,9 @@ class LivePlayer(props: LivePlayerProps) : RComponent<LivePlayerProps, PlayerSta
                 autoBuffer = true
                 controls = props.showControls
                 poster = "/images/placeholder.jpg"
-                src = props.source?.let {
-                    sourceMemo.getSrcUrl(it.caption)
-                } ?: ""
+                props.source?.let {
+                    src = sourceMemo.getSrcUrl(it.caption)
+                }
             }
         }
     }

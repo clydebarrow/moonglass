@@ -17,6 +17,9 @@
 package org.moonglass.ui
 
 import kotlinx.css.Color
+import kotlinx.css.CssBuilder
+import kotlinx.css.backgroundColor
+import kotlinx.css.color
 import org.moonglass.ui.user.UserPreferences
 
 /*
@@ -47,8 +50,8 @@ object Theme {
                 override val backgroundColor = Color.lightBlue
             }
             override val subHeader = object : ColorSet {
-                override val textColor: Color = Color.black
-                override val backgroundColor = header.backgroundColor.lighten(20)
+                override val textColor: Color = header.textColor
+                override val backgroundColor = header.backgroundColor.lighten(15)
                 override val selectedBackgroundColor: Color = Color.lightSalmon
             }
             override val notifications = object : ColorSet {
@@ -121,4 +124,9 @@ object Theme {
     val current: Mode get() = UserPreferences.current.theme
 
     operator fun invoke() = current
+}
+
+fun CssBuilder.useColorSet(colorSet: Theme.ColorSet) {
+    this.backgroundColor = colorSet.backgroundColor
+    this.color = colorSet.textColor
 }

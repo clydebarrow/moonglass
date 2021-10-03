@@ -61,6 +61,7 @@ import org.moonglass.ui.ZIndex
 import org.moonglass.ui.applyState
 import org.moonglass.ui.cardStyle
 import org.moonglass.ui.name
+import org.moonglass.ui.useColorSet
 import org.moonglass.ui.utility.SavedState
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
@@ -231,8 +232,7 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
             // header
             styledDiv {
                 css {
-                    backgroundColor = Theme().header.backgroundColor
-                    color = Theme().header.textColor
+                    useColorSet(Theme().header)
                     fontWeight = FontWeight.bold
                     justifyContent = JustifyContent.center
                     textAlign = TextAlign.center
@@ -266,7 +266,7 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
                     item.apply {
                         render {
                             css {
-                                backgroundColor = Theme().content.backgroundColor
+                                useColorSet(Theme().content)
                                 justifyContent = JustifyContent.start
                                 width = LinearDimension.fillAvailable
                                 padding(0.5.rem)

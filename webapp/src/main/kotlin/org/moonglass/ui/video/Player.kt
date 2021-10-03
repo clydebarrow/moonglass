@@ -29,6 +29,7 @@ import kotlinx.css.rem
 import kotlinx.css.width
 import org.moonglass.ui.ResponsiveLayout
 import org.moonglass.ui.Theme
+import org.moonglass.ui.useColorSet
 import react.Props
 import react.RBuilder
 import react.RComponent
@@ -51,7 +52,7 @@ class Player(props: PlayerProps) : RComponent<PlayerProps, PlayerState>(props) {
     override fun RBuilder.render() {
         styledVideo {
             css {
-                backgroundColor = Theme().content.backgroundColor
+                useColorSet(Theme().content)
                 width = 100.pct
                 height = props.height ?: (ResponsiveLayout.playerHeight - 3.rem)
             }

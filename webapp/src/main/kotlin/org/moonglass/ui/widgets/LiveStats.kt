@@ -12,14 +12,16 @@ import kotlinx.coroutines.launch
 import kotlinx.css.Color
 import kotlinx.css.Cursor
 import kotlinx.css.Display
+import kotlinx.css.GridColumn
 import kotlinx.css.GridTemplateColumns
 import kotlinx.css.JustifyContent
 import kotlinx.css.Position
 import kotlinx.css.TextAlign
 import kotlinx.css.backgroundColor
-import kotlinx.css.color
+import kotlinx.css.bottom
 import kotlinx.css.cursor
 import kotlinx.css.display
+import kotlinx.css.gridColumn
 import kotlinx.css.gridTemplateColumns
 import kotlinx.css.justifyContent
 import kotlinx.css.left
@@ -27,10 +29,12 @@ import kotlinx.css.padding
 import kotlinx.css.position
 import kotlinx.css.px
 import kotlinx.css.rem
+import kotlinx.css.right
 import kotlinx.css.textAlign
 import kotlinx.css.top
 import kotlinx.css.zIndex
 import kotlinx.html.DIV
+import kotlinx.html.js.onClickFunction
 import kotlinx.html.js.onDoubleClickFunction
 import org.moonglass.ui.App
 import org.moonglass.ui.Theme
@@ -38,6 +42,8 @@ import org.moonglass.ui.ZIndex
 import org.moonglass.ui.asBitRate
 import org.moonglass.ui.asSize
 import org.moonglass.ui.cardStyle
+import org.moonglass.ui.imageSrc
+import org.moonglass.ui.useColorSet
 import org.moonglass.ui.utility.SavedState
 import org.moonglass.ui.utility.SavedState.restore
 import org.moonglass.ui.utility.StateVar
@@ -51,6 +57,7 @@ import react.setState
 import styled.StyledDOMBuilder
 import styled.css
 import styled.styledDiv
+import styled.styledImg
 
 
 /**
@@ -70,7 +77,7 @@ class LiveStats : RComponent<LiveStatsProps, LiveStatsState>() {
 
     companion object {
         private const val saveKey = "liveStatsKey"
-        val columns = listOf("Source", "Clients", "Data rate", "Total")
+        val columns = listOf("Source" to 8, "Clients" to 2, "Data rate" to 8, "Total" to 8)
     }
 
     private var job: Job? = null
@@ -136,10 +143,6 @@ class LiveStats : RComponent<LiveStatsProps, LiveStatsState>() {
         }
     }
 
-    private fun StyledDOMBuilder<DIV>.columnHeader(text: String) {
-        cell(text, TextAlign.right, Theme().header.backgroundColor)
-    }
-
     override fun RBuilder.render() {
         startStop(props.isShowing.value)
         styledDiv {
@@ -155,23 +158,52 @@ class LiveStats : RComponent<LiveStatsProps, LiveStatsState>() {
                 else
                     Display.none
                 justifyContent = JustifyContent.center
-                gridTemplateColumns = GridTemplateColumns(columns.joinToString(" ") { "minmax(6rem, max-content)" })
+                gridTemplateColumns =
+                    GridTemplateColumns(columns.joinToString(" ") { "minmax(${it.second}rem, max-content)" })
                 position = Position.absolute
                 top = state.position.y.px
                 left = state.position.x.px
-                backgroundColor = Theme().menu.backgroundColor
-                color = Theme().menu.textColor
+                useColorSet(Theme().menu)
                 zIndex = ZIndex.Stats.index
             }
-            if (props.isShowing.value)
-                columns.forEach {
-                    columnHeader(it)
+            if (props.isShowing.value) {
+                styledDiv {
+                    css {
+                        gridColumn = GridColumn("1 / span ${columns.size}")
+                        textAlign = TextAlign.center
+                        useColorSet(Theme().header)
+                        position = Position.relative
+                    }
+                    +"Live stream statistics"
+                    // overlay a closing button
+                    styledImg {
+                        imageSrc("close", 1.5.rem)
+                        css {
+                            position = Position.absolute
+                            right = 0.px
+                            backgroundColor = Color.transparent
+                            top = 0.px
+                            bottom = 0.px
+                            cursor = Cursor.pointer
+                        }
+                        attrs {
+                            onClickFunction = { App.showLiveStatus = false }
+                        }
+                    }
                 }
-            LiveSourceFactory.sources.forEach {
-                cell(it.caption)
-                cell(it.clientCount.toString(), TextAlign.right)
-                cell(it.rate.asBitRate, TextAlign.right)
-                cell(it.totalBytes.asSize, TextAlign.right)
+                columns.forEachIndexed { index, it ->
+                    cell(
+                        it.first,
+                        if (index == 0) TextAlign.left else TextAlign.right,
+                        Theme().subHeader.backgroundColor
+                    )
+                }
+                LiveSourceFactory.sources.forEach {
+                    cell(it.caption)
+                    cell(it.clientCount.toString(), TextAlign.right)
+                    cell(it.rate.asBitRate, TextAlign.right)
+                    cell(it.totalBytes.asSize, TextAlign.right)
+                }
             }
         }
     }

@@ -38,11 +38,10 @@ import kotlinx.css.properties.transform
 import kotlinx.css.properties.transition
 import kotlinx.css.px
 import kotlinx.css.rem
-import kotlinx.css.width
 import kotlinx.html.InputType
 import kotlinx.html.id
 import kotlinx.html.js.onClickFunction
-import org.moonglass.ui.fallbackPng
+import org.moonglass.ui.imageSrc
 import org.moonglass.ui.utility.StateVar
 import org.w3c.dom.events.Event
 import react.RBuilder
@@ -90,7 +89,7 @@ fun StyledDOMBuilder<*>.shrinkable(expanded: Boolean, maxHeight: LinearDimension
  */
 fun StyledDOMBuilder<*>.expandButton(expanded: Boolean, onClick: ((Event) -> Unit)? = null) {
     styledImg {
-        fallbackPng("/images/play.svg", 20.px)
+        imageSrc("play", 20.px)
         attrs {
             onClick?.also { onClickFunction = it }
         }

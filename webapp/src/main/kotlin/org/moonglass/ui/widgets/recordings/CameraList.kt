@@ -37,7 +37,6 @@ import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
 import kotlinx.css.flexWrap
 import kotlinx.css.fontWeight
-import kotlinx.css.height
 import kotlinx.css.justifyContent
 import kotlinx.css.marginRight
 import kotlinx.css.opacity
@@ -63,13 +62,14 @@ import org.moonglass.ui.api.getStartTime
 import org.moonglass.ui.api.storage
 import org.moonglass.ui.asBitRate
 import org.moonglass.ui.asSize
-import org.moonglass.ui.fallbackPng
+import org.moonglass.ui.imageSrc
 import org.moonglass.ui.name
 import org.moonglass.ui.style.column
 import org.moonglass.ui.style.expandButton
 import org.moonglass.ui.style.shrinkable
 import org.moonglass.ui.toDuration
 import org.moonglass.ui.tooltip
+import org.moonglass.ui.useColorSet
 import org.moonglass.ui.video.LiveSource
 import org.moonglass.ui.video.LiveSourceFactory
 import org.moonglass.ui.video.RecordingSource
@@ -142,7 +142,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
             css {
                 display = Display.flex
                 flexDirection = FlexDirection.row
-                backgroundColor = Theme().subHeader.backgroundColor
+                useColorSet(Theme().subHeader)
                 alignContent = Align.center
                 padding(left = 1.rem, right = 6.px)
                 color = Theme().subHeader.textColor
@@ -177,7 +177,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                 +"${stream.metaData.fsBytes.asSize} / ${stream.metaData.retainBytes.asSize}"
             }
             styledImg {
-                fallbackPng("/images/camera.svg", 16.px)
+                imageSrc("/images/camera.svg", 16.px)
                 attrs {
                     if (stream.metaData.record)
                         onClickFunction = {
@@ -214,8 +214,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                         onClickFunction = { props.showRecording(RecordingSource(stream, recording, props.subTitle)) }
                     }
                     css {
-                        backgroundColor = Theme().content.backgroundColor
-                        color = Theme().content.textColor
+                        useColorSet(Theme().content)
                         position = Position.relative    // required to make tooltip work.
                         display = Display.flex
                         flexDirection = FlexDirection.row
@@ -241,7 +240,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                             width = LinearDimension.auto
                         }
                         styledImg {
-                            fallbackPng("/images/download.svg", 16.px)
+                            imageSrc("/images/download.svg", 16.px)
                         }
                     }
                 }

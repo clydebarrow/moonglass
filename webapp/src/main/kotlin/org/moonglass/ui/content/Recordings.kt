@@ -73,6 +73,7 @@ import org.moonglass.ui.as90k
 import org.moonglass.ui.name
 import org.moonglass.ui.plusHours
 import org.moonglass.ui.plusSeconds
+import org.moonglass.ui.useColorSet
 import org.moonglass.ui.utility.SavedState
 import org.moonglass.ui.utility.StateVar
 import org.moonglass.ui.utility.StateVar.Companion.createValue
@@ -280,7 +281,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                     alignItems = Align.start
                     flexGrow = 1.0
                     flexWrap = FlexWrap.nowrap
-                    backgroundColor = Theme().content.backgroundColor
+                    useColorSet(Theme().content)
                 }
                 styledDiv {
                     name = "StreamGroup"
@@ -364,7 +365,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                 styledDiv {
                     name = "PlayerGroup"
                     css {
-                        backgroundColor = Theme().content.backgroundColor
+                        useColorSet(Theme().content)
                         justifyContent = JustifyContent.center
                         alignContent = Align.center
                         padding(0.75.rem)

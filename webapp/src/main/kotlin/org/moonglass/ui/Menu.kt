@@ -130,7 +130,7 @@ class ContextStyle(private val horz: Double, private val vert: Double) : MenuSty
         else
             right = -horz.rem
         borderRadius = 0.25.rem
-        backgroundColor = Theme().menu.backgroundColor
+        useColorSet(Theme().menu)
         boxShadow(rgba(0, 0, 0, 0.1), 0.px, 20.px, 25.px, (-5).px)
         boxShadow(rgba(0, 0, 0, 0.04), 0.px, 10.px, 10.px, -5.px)
         transition("all", ResponsiveLayout.menuTransitionTime)

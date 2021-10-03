@@ -34,6 +34,7 @@ import kotlinx.css.opacity
 import kotlinx.css.padding
 import kotlinx.css.pointerEvents
 import kotlinx.css.position
+import kotlinx.css.properties.LineHeight
 import kotlinx.css.properties.boxShadow
 import kotlinx.css.properties.transition
 import kotlinx.css.px
@@ -145,22 +146,10 @@ fun String.url(params: Map<String, Any?>): String {
         this
 }
 
-suspend inline fun <reified T : Any> String.fetch(
-    params: Map<String, Any?> = mapOf(),
-    headers: Map<String, Any> = mapOf()
-): T {
-    val response = window.fetch(url(params)).await()
-    if (response.ok) {
-        val text = response.text().await()
-        return kotlinx.serialization.json.Json.decodeFromString(text)
-    }
-    throw HttpException(response.status.toInt(), response.statusText)
-}
-
 // give a card style to a thing
 fun StyledDOMBuilder<*>.cardStyle() {
     css {
-        backgroundColor = Theme().content.backgroundColor
+        useColorSet(Theme().content)
         borderRadius = 0.4.rem
         display = Display.flex
         margin(0.5.rem)
@@ -197,32 +186,27 @@ val Long.asSize: String
         }
     }
 
+// get a string representation of the number (expressed as bytes/sec) in a format scaled depending on the
+// magnitude.
 val Double.asBitRate: String
     get() {
         val unit: String
         val value: Double
-        if (this < 500000) {
+        if (this < 500000 / 8) {
             unit = "kbps"
-            value = this / 1024
+            value = this / 1024 * 8
         } else {
             unit = "Mbps"
-            value = this / 1024 / 1024
+            value = this / 1024 / 1024 * 8
         }
-        val bitwhole = value.toInt()
-        val bitfrac = ((value - bitwhole.toDouble()) * 10).roundToInt()
-        return "$bitwhole.$bitfrac $unit"
+        val whole = value.toInt()
+        val frac = ((value - whole.toDouble()) * 10).roundToInt()
+        return "$whole.$frac $unit"
     }
 
 //const val timePattern = "dd mmm yyyy HH:MM:ss"
 val Date.formatDate: String
     get() = UserPreferences.current.dateFormat.run { format() }
-
-val Date.formatHHMM: String
-    get() {
-        val hours = getHours().digits(2)
-        val minutes = getMinutes().digits(2)
-        return listOf(hours, minutes).joinToString(":")
-    }
 
 val Date.formatTime: String
     get() = UserPreferences.current.timeFormat.run { format() }
@@ -310,13 +294,30 @@ fun RBuilder.dismisser(
     }
 }
 
+/**
+ * Construct an image src attribute
+ * @param image The image name. Can be a full path, a simple name or a basename (recommended)
+ * @param width The desired width of the image
+ * @param height The height, defaults to the same as the width
+ */
 
-fun StyledDOMBuilder<IMG>.fallbackPng(image: String, size: LinearDimension) {
+fun StyledDOMBuilder<IMG>.imageSrc(image: String, width: LinearDimension, height: LinearDimension = width) {
+    val path = image.let {
+        if (it.contains('/'))
+            it
+        else
+            "/images/$it"
+    }.let {
+        if (it.contains('.'))
+            it
+        else
+            "$it.svg"
+    }
     css {
-        height = size
-        width = size
+        this.height = width
+        this.width = width
     }
     attrs {
-        src = image.replace(".svg", ".png")     // TODO This is just because the Moonfire http server doesn't like svg
+        src = path.replace(".svg", ".png")     // TODO This is just because the Moonfire http server doesn't like svg
     }
 }

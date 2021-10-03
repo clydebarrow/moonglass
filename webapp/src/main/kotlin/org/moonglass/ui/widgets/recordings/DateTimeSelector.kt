@@ -53,6 +53,7 @@ import org.moonglass.ui.name
 import org.moonglass.ui.style.checkBox
 import org.moonglass.ui.style.expandButton
 import org.moonglass.ui.style.shrinkable
+import org.moonglass.ui.useColorSet
 import org.moonglass.ui.utility.StateVar
 import org.moonglass.ui.widgets.timePicker
 import org.w3c.dom.HTMLSelectElement
@@ -137,8 +138,7 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
             shrinkable(props.expanded(), 50.rem)
             cardStyle()
             css {
-                color = Theme().content.textColor
-                backgroundColor = Theme().content.backgroundColor
+                useColorSet(Theme().content)
                 position = Position.absolute
                 top = 3.rem
                 display = Display.flex
@@ -149,8 +149,7 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
             // wrap the calendar so we can center it.
             styledDiv {
                 css {
-                    backgroundColor = Theme().content.backgroundColor
-                    color = Theme().content.textColor
+                    useColorSet(Theme().content)
                     display = Display.flex
                     justifyContent = JustifyContent.center
                     width = 100.pct
@@ -200,7 +199,7 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
                 }
                 styledSelect {
                     css {
-                        backgroundColor = Theme().content.backgroundColor
+                        useColorSet(Theme().content)
                     }
                     attrs {
                         id = "maxDurationSelect"
