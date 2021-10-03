@@ -16,7 +16,6 @@
 
 package org.moonglass.ui.content
 
-import kotlinx.browser.window
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.css.Align
@@ -94,7 +93,6 @@ import kotlin.time.Duration
 
 external interface RecordingsState : State {
     var selectedStreams: MutableSet<String>
-    var cameras: Map<Api.Camera, List<Stream>>
     var recLists: MutableMap<String, RecList>
 
     // time selector state
@@ -150,9 +148,6 @@ data class SavedRecordingState(
 @JsExport
 class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(props) {
 
-    private val RecordingsState.maxEndDateTime get() = if (trimEnds()) endDateTime.as90k else Long.MAX_VALUE
-    private val RecordingsState.minStartDateTime get() = if (trimEnds()) startDateTime.as90k else 0
-    private val RecordingsState.allStreams get() = cameras.values.flatten()
 
     private fun saveMyStuff() {
         SavedState.save(
@@ -202,9 +197,6 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
         }
         copyFrom(restored)
         startDate = createValue(Date().withTime(0, 0))
-        window.addEventListener("beforeunload", {
-            SavedState.save(saveKey, SavedRecordingState.from(state))
-        })
         listOf(maxDuration, startTime, endTime, startDate, trimEnds).forEach {
             it.listener = { updateRecordings(true) }
         }
@@ -243,6 +235,8 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                     }
                 }.filterNotNull()
                 applyState {
+                    selectedStreams =
+                        selectedStreams.filter { it in props.api.allStreams.map { it.key } }.toMutableSet()
                     recLists.putAll(updates)
                 }
             }
@@ -435,3 +429,6 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
 
     }
 }
+
+val RecordingsState.maxEndDateTime get() = if (trimEnds()) endDateTime.as90k else Long.MAX_VALUE
+val RecordingsState.minStartDateTime get() = if (trimEnds()) startDateTime.as90k else 0

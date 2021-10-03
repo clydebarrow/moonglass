@@ -209,6 +209,7 @@ class App() : RComponent<Props, AppState>() {
                     setState {
                         contentShowing = item
                     }
+                    item.refresher?.invoke()
                 }
             }
         }
