@@ -1,139 +1,111 @@
 package org.moonglass.ui.widgets
 
 import kotlinx.browser.document
-import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.html.CommonAttributeGroupFacade
-import kotlinx.html.js.onMouseDownFunction
-import kotlinx.serialization.Serializable
-import org.w3c.dom.HTMLCanvasElement
 import org.w3c.dom.HTMLElement
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
-import kotlin.experimental.and
-import kotlin.math.abs
-
-/**
- * A class representing a screen position of an element.
- * Negative values represent displacements from right or bottom, positive from top or left.
- * The position can be normalised, i.e. each of x and y should have an absolute value which is
- * the minimum required to specify the location, so that as the element moves across the window centre it
- * flips between positive and negative displacements.
- *
- */
-@Serializable
-data class ScreenPosition(val x: Int, val y: Int) {
-
-    /**
-     * Given a move from this position of the specified element, compute a new normalised position, such that the
-     * element has at least a specified fraction of each dimension still within the window bounds
-     *
-     * TODO - allow specification of bounds rather than using the window bounds
-     */
-    fun update(element: HTMLElement, deltaX: Int, deltaY: Int, frac: Double = 1.0): ScreenPosition {
-        val height = element.offsetHeight
-        val width = element.offsetWidth
-        val xFrac = (width * frac).toInt()
-        val yFrac = (height * frac).toInt()
-        // if the range is invalid (lowerbound greater than higher bound) just fix the element to top/left corner
-        // this could occur if the element won't fit inside the window bounds
-        val newX = try {
-            (x + deltaX).coerceIn(-width + xFrac, window.innerWidth - xFrac)
-        } catch (ex: Exception) {
-            0
-        }
-        val newY = try {
-            (y + deltaY).coerceIn(-height + yFrac, window.innerHeight - yFrac)
-        } catch (ex: Exception) {
-            0
-        }
-        return ScreenPosition(newX, newY)
-    }
-
-    /**
-     * Get a normalised version of the position. This works only if the element is inside the window
-     */
-
-    fun normalise(element: HTMLElement): ScreenPosition {
-        // first make sure it's inside.
-        return update(element, 0, 0, 1.0).run {
-            val height = element.offsetHeight
-            val width = element.offsetWidth
-            val wWidth = window.innerWidth
-            val wHeight = window.innerHeight
-            val rightX = wWidth - x - width // right margin
-            val bottomY = wHeight - y - height // bottom margin
-            ScreenPosition(if (x < abs(rightX)) x else -rightX, if (y < abs(bottomY)) y else -bottomY)
-        }
-    }
-}
+import react.dom.NativeTouchEvent
 
 /**
  * A utility class to intercept mouse operation and deliver a set of drag events
- * @param current The initial screen position of the element
+ * @param element The element to attach to
+ * @param initial The initial screen position of the element
  * @param scope A scope to use to deliver the flow.
  */
-class Dragger(private var current: ScreenPosition, private val scope: CoroutineScope = MainScope()) {
+class Dragger(val element: HTMLElement, initial: ScreenPosition, private val scope: CoroutineScope = MainScope()) {
 
-    private val src = MutableStateFlow(current)
+    private val src = MutableStateFlow(initial)
+
+    private var current = initial
+
 
     val flow: StateFlow<ScreenPosition> = src
 
     private var lastX: Int = 0
     private var lastY: Int = 0
-    private var element: HTMLElement? = null
 
-    private val upFun = fun(event: Event): Unit {
-        up(event)
+    private val upFun = fun(_: Event) {
+        up()
     }
+
+    // fun turned into an object to make sure removeEventListener works properly.
     private val moveFun = fun(event: Event) {
-        move(event)
-    }
-
-    private fun down(event: Event) {
-        event.unsafeCast<react.dom.MouseEvent<HTMLCanvasElement, MouseEvent>>().let { mouseEvent ->
-            if(mouseEvent.button != 0)      // only left button initiates drag
-                return
-            event.stopPropagation()
-            event.preventDefault()
-            lastX = mouseEvent.clientX.toInt()
-            lastY = mouseEvent.clientY.toInt()
-            document.addEventListener("mousemove", moveFun)
-            document.addEventListener("mouseup", upFun)
-            element = mouseEvent.currentTarget
-        }
-    }
-
-    private fun up(event: Event) {
-        console.log("Event up")
-        document.removeEventListener("mouseup", upFun)
-        document.removeEventListener("mousemove", moveFun)
-        scope.launch {
-            src.emit(current)
-        }
-    }
-
-    private fun move(event: Event) {
         event as MouseEvent
         // check left button is still down, finish if not
-        if((event.buttons.toInt() and 1) == 0) {
-            up(event)
+        if ((event.buttons.toInt() and 1) == 0) {
+            up()
             return
         }
-        element?.let { el ->
-            current = current.update(el, event.clientX - lastX, event.clientY - lastY)
-            el.style.left = "${current.x}px"
-            el.style.top = "${current.y}px"
-            lastX = event.clientX
-            lastY = event.clientY
+        doMove(event.clientX, event.clientY)
+    }
+
+    private val touchMoveFun = fun(event: Event) {
+        event as NativeTouchEvent
+        event.touches.item(0)?.let { touch ->
+            doMove(touch.clientX, touch.clientY)
+        }
+    }
+    private val touchEndFun = fun(_: Event) {
+        element.removeEventListener("touchend", upFun)
+        element.removeEventListener("touchmove", touchMoveFun)
+        update(current)
+    }
+
+
+    private fun update(position: ScreenPosition) {
+        scope.launch {
+            src.emit(position)
         }
     }
 
-    fun attach(tag: CommonAttributeGroupFacade) {
-        tag.onMouseDownFunction = ::down
+    init {
+        element.addEventListener("mousedown", ::mouseDown)
+        element.addEventListener("touchstart", ::touchStart)
+    }
+
+    private fun touchStart(event: Event) {
+        event.stopPropagation()
+        event.preventDefault()
+        event.unsafeCast<NativeTouchEvent>().let { touchEvent ->
+            touchEvent.touches.item(0)?.let {
+                lastX = it.clientX
+                lastY = it.clientY
+                element.addEventListener("touchmove", touchMoveFun)
+                element.addEventListener("touchend", touchEndFun)
+                current = ScreenPosition(element.offsetLeft, element.offsetTop)
+            }
+        }
+    }
+
+    private fun mouseDown(mouseEvent: Event) {
+        mouseEvent as MouseEvent
+        if (mouseEvent.button.toInt() != 0)      // only left button initiates drag
+            return
+        mouseEvent.stopPropagation()
+        mouseEvent.preventDefault()
+        lastX = mouseEvent.clientX
+        lastY = mouseEvent.clientY
+        current = ScreenPosition(element.offsetLeft, element.offsetTop)
+        document.addEventListener("mousemove", moveFun)
+        document.addEventListener("mouseup", upFun)
+    }
+
+    private fun up() {
+        document.removeEventListener("mouseup", upFun)
+        document.removeEventListener("mousemove", moveFun)
+        update(current)
+    }
+
+    private fun doMove(x: Int, y: Int) {
+        current = current.update(element, x - lastX, y - lastY)
+        element.style.left = "${current.x}px"
+        element.style.top = "${current.y}px"
+        lastX = x
+        lastY = y
     }
 }

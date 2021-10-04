@@ -2,7 +2,6 @@ package org.moonglass.ui.widgets
 
 import kotlinx.browser.window
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collect
@@ -39,6 +38,7 @@ import kotlinx.html.js.onDoubleClickFunction
 import org.moonglass.ui.App
 import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
+import org.moonglass.ui.applyState
 import org.moonglass.ui.asBitRate
 import org.moonglass.ui.asSize
 import org.moonglass.ui.cardStyle
@@ -47,13 +47,15 @@ import org.moonglass.ui.useColorSet
 import org.moonglass.ui.utility.SavedState
 import org.moonglass.ui.utility.SavedState.restore
 import org.moonglass.ui.utility.StateVar
+import org.moonglass.ui.video.LiveSource
 import org.moonglass.ui.video.LiveSourceFactory
+import org.w3c.dom.HTMLElement
 import react.Props
 import react.RBuilder
 import react.RComponent
 import react.State
+import react.createRef
 import react.dom.attrs
-import react.setState
 import styled.StyledDOMBuilder
 import styled.css
 import styled.styledDiv
@@ -75,12 +77,24 @@ external interface LiveStatsState : State {
 
 class LiveStats : RComponent<LiveStatsProps, LiveStatsState>() {
 
+    private class Column(
+        val heading: String,
+        val minEms: Int,
+        val align: TextAlign = TextAlign.right,
+        val content: (LiveSource) -> String
+    )
+
     companion object {
         private const val saveKey = "liveStatsKey"
-        val columns = listOf("Source" to 8, "Clients" to 2, "Data rate" to 8, "Total" to 8)
+        private val columns = listOf(
+            Column("Source", 8, TextAlign.left) { it.caption },
+            Column("Clients", 2) { it.clientCount.toString() },
+            Column("Data rate", 8) { it.rate.asBitRate },
+            Column("Total", 8) { it.totalBytes.asSize },
+        )
     }
 
-    private var job: Job? = null
+    private val elementRef = createRef<HTMLElement>()
 
     private lateinit var dragger: Dragger
 
@@ -88,8 +102,6 @@ class LiveStats : RComponent<LiveStatsProps, LiveStatsState>() {
 
     override fun LiveStatsState.init() {
         position = saveKey.restore { ScreenPosition(window.innerWidth - 400, window.innerHeight - 100) }
-        scope = MainScope()
-        dragger = Dragger(position, scope)
     }
 
     // this is the one that should be called???
@@ -97,42 +109,47 @@ class LiveStats : RComponent<LiveStatsProps, LiveStatsState>() {
         init()
     }
 
-    private fun startStop(yes: Boolean) {
-        if (yes) {
-            if (job == null) {
-                job = scope.launch {
-                    LiveSourceFactory.flow.collect {
-                        forceUpdate()
+    override fun componentDidMount() {
+        scope = MainScope()
+        elementRef.current?.let { element ->
+            val pos = state.position.deNormalise(element)
+            dragger = Dragger(element, pos, scope)
+            applyState {
+                position = pos
+            }
+            dragger.flow.onEach {
+                elementRef.current?.let { element ->
+                    applyState {
+                        position = it.onScreen(element)
                     }
                 }
-            }
-        } else {
-            job?.cancel()
-            job = null
+            }.launchIn(scope)
         }
-    }
-
-    override fun componentDidMount() {
-        dragger.flow.onEach {
-            setState {
-                position = it
+        scope.launch {
+            LiveSourceFactory.flow.collect {
+                forceUpdate()
             }
-        }.launchIn(scope)
+        }
         SavedState.addOnUnload(::saveMyStuff)
     }
 
     private fun saveMyStuff() {
-        SavedState.save(saveKey, state.position)
+        elementRef.current?.let { element ->
+            SavedState.save(saveKey, state.position.normalise(element))
+        }
     }
 
     override fun componentWillUnmount() {
-        startStop(false)
         scope.cancel()      // also cancels the dragger
         saveMyStuff()
         SavedState.removeOnUnload(::saveMyStuff)
     }
 
-    private fun StyledDOMBuilder<DIV>.cell(text: String, align: TextAlign = TextAlign.left, background: Color? = null) {
+    private fun StyledDOMBuilder<DIV>.cell(
+        text: String,
+        align: TextAlign = TextAlign.right,
+        background: Color? = null
+    ) {
         styledDiv {
             +text
             css {
@@ -144,12 +161,11 @@ class LiveStats : RComponent<LiveStatsProps, LiveStatsState>() {
     }
 
     override fun RBuilder.render() {
-        startStop(props.isShowing.value)
         styledDiv {
             attrs {
+                ref = elementRef
                 onDoubleClickFunction = { App.showLiveStatus = false }
             }
-            dragger.attach(attrs)
             cardStyle()
             css {
                 cursor = Cursor.grab
@@ -159,7 +175,7 @@ class LiveStats : RComponent<LiveStatsProps, LiveStatsState>() {
                     Display.none
                 justifyContent = JustifyContent.center
                 gridTemplateColumns =
-                    GridTemplateColumns(columns.joinToString(" ") { "minmax(${it.second}rem, max-content)" })
+                    GridTemplateColumns(columns.joinToString(" ") { "minmax(${it.minEms}rem, max-content)" })
                 position = Position.absolute
                 top = state.position.y.px
                 left = state.position.x.px
@@ -191,18 +207,13 @@ class LiveStats : RComponent<LiveStatsProps, LiveStatsState>() {
                         }
                     }
                 }
-                columns.forEachIndexed { index, it ->
-                    cell(
-                        it.first,
-                        if (index == 0) TextAlign.left else TextAlign.right,
-                        Theme().subHeader.backgroundColor
-                    )
+                columns.forEach {
+                    cell(it.heading, it.align, Theme().subHeader.backgroundColor)
                 }
-                LiveSourceFactory.sources.forEach {
-                    cell(it.caption)
-                    cell(it.clientCount.toString(), TextAlign.right)
-                    cell(it.rate.asBitRate, TextAlign.right)
-                    cell(it.totalBytes.asSize, TextAlign.right)
+                LiveSourceFactory.sources.forEach { source ->
+                    columns.forEach {
+                        cell(it.content(source), it.align)
+                    }
                 }
             }
         }

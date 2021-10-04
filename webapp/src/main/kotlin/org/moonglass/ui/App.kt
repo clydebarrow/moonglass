@@ -145,11 +145,12 @@ class App() : RComponent<Props, AppState>() {
             }
         }
         child(Toast::class) { attrs { } }
-        child(LiveStats::class) {
-            attrs {
-                isShowing = state.isLiveStatsShowing
+        if (state.isLiveStatsShowing.value)
+            child(LiveStats::class) {
+                attrs {
+                    isShowing = state.isLiveStatsShowing
+                }
             }
-        }
         state.dialogShowing?.let {
             child(it) {
                 attrs {
