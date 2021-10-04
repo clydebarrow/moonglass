@@ -77,9 +77,10 @@ object Theme {
             override val isDark: Boolean = true
             override val borderColor: Color = Color.darkGray
             override val selectedBorderColor: Color = Color("#000070")
+
             override val header = object : ColorSet {
                 override val textColor: Color = Color.white
-                override val backgroundColor = Color("#00005b")
+                override val backgroundColor = Color("#10105b")
             }
             override val subHeader = object : ColorSet {
                 override val textColor: Color = Color.white
@@ -91,8 +92,8 @@ object Theme {
                 override val backgroundColor = Color.white
             }
             override val content = object : ColorSet {
-                override val textColor: Color = Color("#f0f0f0")
-                override val backgroundColor = Color.black
+                override val textColor: Color = Color("#e0e0e0")
+                override val backgroundColor = Color("#101010")
             }
             override val menu = object : ColorSet {
                 override val textColor: Color = content.textColor
@@ -100,9 +101,9 @@ object Theme {
             }
             override val button: ColorSet = object : ColorSet {
                 override val textColor: Color = content.textColor
-                override val backgroundColor: Color = Color("#800e0e")      // used for cancel button
-                override val selectedBackgroundColor = Color("#00600f")     // used for active non-cancel buttons
-                override val disabledBackgroundColor = Color("#202020")     // disabled buttons
+                override val backgroundColor: Color = Color("#502020")      // used for cancel button
+                override val selectedBackgroundColor = Color("#205020")     // used for active non-cancel buttons
+                override val disabledBackgroundColor = Color("#303030")     // disabled buttons
             }
 
             override val overlay: Color = Color("#80808030")
