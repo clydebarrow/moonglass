@@ -1,3 +1,5 @@
+import Hash.hash
+
 /*
  * Copyright (c) 2021. Clyde Stubbs
  *
@@ -13,8 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import java.util.Properties
 
 /**
  *  The presence of settings.gradle.kts marks this as a stand-alone project.
@@ -75,7 +75,7 @@ val ktorVersion = "1.6.3"
 dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.2.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-js:1.2.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-js:1.3.0")
     implementation("org.jetbrains.kotlin-wrappers:kotlin-react:$reactVersion")
     implementation("org.jetbrains.kotlin-wrappers:kotlin-react-dom:$reactVersion")
     implementation("org.jetbrains.kotlin-wrappers:kotlin-styled:$styledVersion")
@@ -86,7 +86,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:1.5.2")
 
-    implementation("com.soywiz.korlibs.krypto:krypto-js:2.4.1")
+    implementation("com.soywiz.korlibs.krypto:krypto-js:2.4.2")
 
     implementation(npm("react", "17.0.2"))
     implementation(npm("react-dom", "17.0.2"))
@@ -95,15 +95,54 @@ dependencies {
 
 }
 
+
+/**
+ * Take the webpack created by `browserProductionWebpack` and turn it into a release webpack with
+ * important files having content hashes in their file names. The index.html file is adjusted
+ * accordingly.
+ */
+val hashedFileTypes = setOf("js", "css")
+
+val buildRelease by tasks.registering(Sync::class) {
+    description = "Creates a production webpack with content-hashed files."
+    val bpw = tasks.getByPath("browserProductionWebpack")
+    dependsOn(bpw)
+    from(File(projectDir, "build/distributions"))
+    into(File(projectDir, "build/release"))
+    val nameMap = mutableMapOf<String, String>()
+    doFirst {
+        // collect the new names.
+        inputs.sourceFiles.forEach {
+            if (it.extension in hashedFileTypes) {
+                nameMap[it.name] = "${it.nameWithoutExtension}.${it.hash()}.${it.extension}"
+            }
+        }
+    }
+    rename { fileName ->
+        nameMap.getOrDefault(fileName, fileName)
+    }
+    filesMatching("**/index.html") {
+        // perform filename substitution in index.html
+        filter { line ->
+            var newLine = line
+            nameMap.forEach { src, repl ->
+                newLine = newLine.replace("$src\"", "$repl\"")
+            }
+            newLine
+        }
+    }
+}
+
 // set up deployment if configured.
 
 localProperties["deployTarget"]?.also { deployTarget ->
     tasks.register<Exec>("deploy") {
-        dependsOn("browserProductionWebpack")
-        workingDir(File(projectDir, "build/distributions"))
+        dependsOn(buildRelease)
+        workingDir(File(projectDir, "build/release"))
         commandLine("sh", "-c", "scp -r * '$deployTarget'")
     }
 }
+
 
 kotlin {
     sourceSets.all {
