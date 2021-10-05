@@ -118,8 +118,6 @@ fun StyledDOMBuilder<*>.column(
     }
 }
 
-private val camelRegex = "(?<=[a-zA-Z])[A-Z]".toRegex()
-private val snakeRegex = "_[a-zA-Z]".toRegex()
 private val nonAlnumRegex = "[^A-Za-z0-9]".toRegex()
 
 // String extensions
@@ -129,28 +127,13 @@ val String.alNum: String
         return nonAlnumRegex.replace(this, "")
     }
 
-val String.snakeCase: String
-    get() {
-        return camelRegex.replace(this) {
-            "-${it.value}"
-        }.lowercase()
-    }
-
-val String.camelCase: String
-    get() {
-        return snakeRegex.replace(this) {
-            it.value.replace("_", "")
-                .uppercase()
-        }
-    }
-
 
 /**
  * Add a checkbox
  */
 
 fun RBuilder.checkBox(label: String, data: StateVar<Boolean>) {
-    val inputId = label.alNum.snakeCase
+    val inputId = label.alNum
     styledLabel {
         attrs.set("htmlFor", inputId)       // can't use htmlFor property since it doesn't work for react
         css {

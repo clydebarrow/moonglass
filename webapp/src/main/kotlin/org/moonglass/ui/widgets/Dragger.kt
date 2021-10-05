@@ -70,7 +70,6 @@ class Dragger(val element: HTMLElement, initial: ScreenPosition, private val sco
 
     private fun touchStart(event: Event) {
         event.stopPropagation()
-        event.preventDefault()
         event.unsafeCast<NativeTouchEvent>().let { touchEvent ->
             touchEvent.touches.item(0)?.let {
                 lastX = it.clientX
