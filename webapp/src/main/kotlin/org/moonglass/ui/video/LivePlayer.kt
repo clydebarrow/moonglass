@@ -21,11 +21,38 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.css.LinearDimension
+import kotlinx.css.PointerEvents
+import kotlinx.css.Position
+import kotlinx.css.TextAlign
+import kotlinx.css.backgroundColor
+import kotlinx.css.color
 import kotlinx.css.height
+import kotlinx.css.left
+import kotlinx.css.opacity
+import kotlinx.css.padding
 import kotlinx.css.pct
+import kotlinx.css.pointerEvents
+import kotlinx.css.position
+import kotlinx.css.properties.transition
+import kotlinx.css.px
+import kotlinx.css.rem
+import kotlinx.css.right
+import kotlinx.css.textAlign
+import kotlinx.css.top
 import kotlinx.css.width
+import kotlinx.css.zIndex
+import kotlinx.html.js.onChangeFunction
+import kotlinx.html.js.onMouseOverFunction
+import kotlinx.html.js.onTouchStartFunction
+import org.moonglass.ui.ResponsiveLayout
 import org.moonglass.ui.Theme
+import org.moonglass.ui.ZIndex
+import org.moonglass.ui.applyState
 import org.moonglass.ui.useColorSet
+import org.moonglass.ui.utility.StateValue
+import org.moonglass.ui.widgets.recordings.Stream
+import org.w3c.dom.HTMLElement
+import org.w3c.dom.HTMLSelectElement
 import org.w3c.dom.HTMLVideoElement
 import org.w3c.dom.mediasource.AppendMode
 import org.w3c.dom.mediasource.MediaSource
@@ -38,16 +65,28 @@ import org.w3c.dom.url.URL
 import react.Props
 import react.RBuilder
 import react.RComponent
+import react.State
 import react.createRef
 import react.dom.attrs
+import react.dom.onMouseLeave
+import react.dom.option
 import styled.css
+import styled.styledDiv
+import styled.styledSelect
 import styled.styledVideo
 
 external interface LivePlayerProps : Props {
-    var height: LinearDimension?
+    var height: LinearDimension
     var playerKey: String
     var showControls: Boolean
-    var source: LiveSource?
+    var source: StateValue<String>
+    var allStreams: Map<String, Stream>
+    var overlay: Boolean                    // should the selector overlay the video?
+}
+
+external interface PlayerState : State {
+    var isSelectorShowing: Boolean
+    var wasTouched: Boolean         // set if we saw a touch event
 }
 
 class LivePlayer(props: LivePlayerProps) : RComponent<LivePlayerProps, PlayerState>(props) {
@@ -59,19 +98,19 @@ class LivePlayer(props: LivePlayerProps) : RComponent<LivePlayerProps, PlayerSta
      * Cache mediaSource for a given source.
      */
     private inner class SourceMemo {
-        private var key: String? = null
+        private var source: Stream? = null
         private var mediaSource: MediaSource? = null
         private var srcUrl: String = ""
 
-        fun getSrcUrl(key: String): String {
+        fun getSrcUrl(source: Stream): String {
             mediaSource?.let {
-                if (key == this.key) return srcUrl
+                if (source == this.source) return srcUrl
                 it.onsourceopen = null
                 it.onsourceended = null
                 it.onsourceclose = null
             }
             close()
-            this.key = key
+            this.source = source
             mediaSource = MediaSource().apply {
                 // attach event listeners
                 onsourceended = {
@@ -80,7 +119,7 @@ class LivePlayer(props: LivePlayerProps) : RComponent<LivePlayerProps, PlayerSta
                     close()
                 }
                 onsourceopen = {
-                    open(it.currentTarget as MediaSource)
+                    open(it.currentTarget as MediaSource, source)
                 }
                 srcUrl = URL.createObjectURL(this)
             }
@@ -162,18 +201,16 @@ class LivePlayer(props: LivePlayerProps) : RComponent<LivePlayerProps, PlayerSta
     /**
      * Start the dataflow. If already flowing, or nothing to flow, do nothing.
      */
-    private fun open(mediaSource: MediaSource) {
+    private fun open(mediaSource: MediaSource, stream: Stream) {
         if (job == null)
-            props.source?.let { source ->
-                job = scope.launch {
-                    source.dataFlow.collect { data ->
-                        contentType = data.contentType
-                        if (bufferQueue.size < MAX_BUFFER)
-                            bufferQueue.add(data.data)
-                        else
-                            console.log("Dropped buffer")
-                        transfer(mediaSource)
-                    }
+            job = scope.launch {
+                LiveSourceFactory.getSource(stream).dataFlow.collect { data ->
+                    contentType = data.contentType
+                    if (bufferQueue.size < MAX_BUFFER)
+                        bufferQueue.add(data.data)
+                    else
+                        console.log("Dropped buffer")
+                    transfer(mediaSource)
                 }
             }
     }
@@ -190,24 +227,112 @@ class LivePlayer(props: LivePlayerProps) : RComponent<LivePlayerProps, PlayerSta
         close()
     }
 
+    override fun PlayerState.init(props: LivePlayerProps) {
+        isSelectorShowing = !props.overlay
+        wasTouched = false
+    }
+
+    private val selectorRef = createRef<HTMLElement>()
 
     override fun RBuilder.render() {
-        styledVideo {
-            ref = videoRef
+        val stream = props.allStreams[props.source.value]
+        val videoHeight: LinearDimension
+        val selectorPosition: Position
+        val selectorOpacity: Double
+        if (props.overlay) {
+            videoHeight = props.height - 3.rem
+            selectorPosition = Position.absolute
+            selectorOpacity = if (state.isSelectorShowing) 1.0 else 0.0
+        } else {
+            videoHeight = props.height
+            selectorPosition = Position.relative
+            selectorOpacity = 1.0
+        }
+
+        styledDiv {
             css {
-                useColorSet(Theme().content)
                 width = 100.pct
-                height = props.height ?: 100.pct
+                height = props.height
+                position = Position.relative
             }
             attrs {
-                set("muted", true)
-                key = props.playerKey
-                autoPlay = true
-                autoBuffer = true
-                controls = props.showControls
-                poster = "/images/placeholder.jpg"
-                props.source?.let {
-                    src = sourceMemo.getSrcUrl(it.caption)
+                onMouseOverFunction = { applyState { isSelectorShowing = true } }
+                onMouseLeave = { applyState { isSelectorShowing = !props.overlay } }
+                if (props.overlay)
+                    onTouchStartFunction = {
+                        console.log("touchstart")
+                        applyState { wasTouched = true; isSelectorShowing = !isSelectorShowing }
+                    }
+            }
+            styledSelect {
+                ref = selectorRef
+                css {
+                    position = selectorPosition
+                    opacity = selectorOpacity
+                    width = 100.pct
+                    height = 3.rem
+                    left = 0.px
+                    top = 0.px
+                    right = 0.px
+                    textAlign = TextAlign.center
+                    backgroundColor = Theme().header.backgroundColor
+                    color = Theme().header.textColor
+                    padding(0.5.rem)
+                    zIndex = ZIndex.Content.index + 2
+                    transition("all", ResponsiveLayout.menuTransitionTime)
+                    // disable hover effects on touch devices.
+                    if (!state.wasTouched) {
+                        hover {
+                            opacity = 1.0
+                        }
+                    }
+                }
+                attrs {
+                    value = props.source.value
+                    onChangeFunction = {
+                        val value = it.currentTarget.unsafeCast<HTMLSelectElement>().value
+                        applyState {
+                            props.source.value = value
+                        }
+                    }
+
+                }
+                option {
+                    attrs {
+                        value = ""
+                    }
+                    +"Select stream"
+                }
+                props.allStreams.forEach {
+                    option {
+                        attrs {
+                            value = it.key
+                        }
+                        +it.value.toString()
+                    }
+                }
+            }
+
+            styledVideo {
+                ref = videoRef
+                css {
+                    useColorSet(Theme().content)
+                    width = 100.pct
+                    height = videoHeight
+                    position = Position.relative
+                    zIndex = ZIndex.Content.index
+                    pointerEvents = PointerEvents.none
+                }
+                attrs {
+                    set("muted", true)
+                    key = props.playerKey
+                    autoPlay = true
+                    autoBuffer = true
+                    controls = props.showControls
+                    poster = "/images/placeholder.jpg"
+                    stream?.let {
+                        src = sourceMemo.getSrcUrl(it)
+                    }
                 }
             }
         }

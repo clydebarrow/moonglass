@@ -75,10 +75,10 @@ import org.moonglass.ui.plusHours
 import org.moonglass.ui.plusSeconds
 import org.moonglass.ui.useColorSet
 import org.moonglass.ui.utility.SavedState
+import org.moonglass.ui.utility.StateValue
 import org.moonglass.ui.utility.StateVar
 import org.moonglass.ui.utility.StateVar.Companion.createValue
 import org.moonglass.ui.video.LivePlayer
-import org.moonglass.ui.video.LiveSource
 import org.moonglass.ui.video.Player
 import org.moonglass.ui.video.RecordingSource
 import org.moonglass.ui.widgets.recordings.CameraList
@@ -106,7 +106,7 @@ external interface RecordingsState : State {
     var expanded: StateVar<Boolean>
 
     var recordingSource: RecordingSource?
-    var liveSource: LiveSource?
+    var liveSource: StateValue<String>
 }
 
 val RecordingsState.startDateTime: Date
@@ -146,6 +146,7 @@ data class SavedRecordingState(
 }
 
 
+@Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
 class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(props) {
 
@@ -201,6 +202,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
         listOf(maxDuration, startTime, endTime, startDate, trimEnds).forEach {
             it.listener = { updateRecordings(true) }
         }
+        liveSource = StateVar("", this@Recordings)
     }
 
     /**
@@ -341,7 +343,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                                     showRecording = {
                                         state.expanded.value = false        //
                                         applyState {
-                                            liveSource = null
+                                            liveSource.value = ""
                                             recordingSource = it
                                         }
                                     }
@@ -349,7 +351,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                                         state.expanded.value = false        //
                                         applyState {
                                             recordingSource = null
-                                            liveSource = it
+                                            liveSource.value = it
                                         }
                                     }
                                     selectedStreams = state.selectedStreams
@@ -397,7 +399,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                                 backgroundColor = Theme().header.backgroundColor
                                 color = Theme().header.textColor
                             }
-                            +(state.recordingSource?.caption ?: state.liveSource?.caption ?: "---")
+                            +(state.recordingSource?.caption ?: state.liveSource.value)
                         }
 
                         if (state.recordingSource != null) {
@@ -414,6 +416,8 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                                     height = ResponsiveLayout.contentHeight - 3.rem
                                     source = state.liveSource
                                     showControls = true
+                                    allStreams = props.api.allStreams
+                                    overlay = false
                                 }
                             }
                         }

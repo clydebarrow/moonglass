@@ -70,8 +70,6 @@ import org.moonglass.ui.style.shrinkable
 import org.moonglass.ui.toDuration
 import org.moonglass.ui.tooltip
 import org.moonglass.ui.useColorSet
-import org.moonglass.ui.video.LiveSource
-import org.moonglass.ui.video.LiveSourceFactory
 import org.moonglass.ui.video.RecordingSource
 import react.Props
 import react.RBuilder
@@ -183,7 +181,7 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                         onClickFunction = {
                             it.preventDefault()
                             it.stopPropagation()
-                            props.showLive(LiveSourceFactory.getSource(stream))
+                            props.showLive(stream.key)
                         }
                 }
                 css {
@@ -284,6 +282,6 @@ external interface CameraListProps : Props {
     // callbacks
     var toggleStream: (String) -> Unit
     var showRecording: (RecordingSource) -> Unit
-    var showLive: (LiveSource) -> Unit
+    var showLive: (String) -> Unit
 }
 

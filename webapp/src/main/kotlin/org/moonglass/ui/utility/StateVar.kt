@@ -24,20 +24,32 @@ import react.State
 /**
  * This class is used to store values that can be passed to a child wrapped in a way that allows it to update the value.
  */
-open class StateVar<T : Any>(value: T, val component: RComponent<out Props, out State>) {
 
-    operator fun invoke() = value
+abstract class StateValue<T : Any>(val component: RComponent<out Props, out State>) {
 
-    open var value: T = value
+    protected abstract var _field: T
+    operator fun invoke() = _field
+    var listener: ((T) -> Unit)? = null
+
+    var value: T
+        get() = _field
         set(value) {
             component.applyState({
                 listener?.invoke(value)
             }) {
-                field = value
+                _field = value
             }
         }
+}
 
-    var listener: ((T) -> Unit)? = null
+/**
+ * A StateValue backed by a simple variable with an initial value
+ */
+open class StateVar<T : Any>(initialValue: T, component: RComponent<out Props, out State>) :
+    StateValue<T>(component) {
+
+    override var _field: T = initialValue
+
 
     /**
      * Convenience function to create a StateVar inside a component, typically used inside init()

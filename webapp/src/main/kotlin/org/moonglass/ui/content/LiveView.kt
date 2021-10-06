@@ -26,10 +26,8 @@ import kotlinx.css.GridRowStart
 import kotlinx.css.GridTemplateColumns
 import kotlinx.css.GridTemplateRows
 import kotlinx.css.JustifyContent
-import kotlinx.css.TextAlign
 import kotlinx.css.alignContent
 import kotlinx.css.backgroundColor
-import kotlinx.css.color
 import kotlinx.css.display
 import kotlinx.css.flexDirection
 import kotlinx.css.gridColumnEnd
@@ -46,7 +44,6 @@ import kotlinx.css.padding
 import kotlinx.css.paddingTop
 import kotlinx.css.pct
 import kotlinx.css.rem
-import kotlinx.css.textAlign
 import kotlinx.css.vh
 import kotlinx.css.width
 import kotlinx.css.zIndex
@@ -61,10 +58,12 @@ import org.moonglass.ui.applyState
 import org.moonglass.ui.name
 import org.moonglass.ui.useColorSet
 import org.moonglass.ui.utility.SavedState
+import org.moonglass.ui.utility.StateValue
 import org.moonglass.ui.video.LivePlayer
-import org.moonglass.ui.video.LiveSourceFactory
 import org.w3c.dom.HTMLSelectElement
+import react.Props
 import react.RBuilder
+import react.RComponent
 import react.State
 import react.dom.attrs
 import react.dom.option
@@ -97,6 +96,7 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
                     val value = it.currentTarget.unsafeCast<HTMLSelectElement>().value
                     applyState {
                         layoutState.current = value
+                        sources = layoutState.layout.getStates(this@LiveView)
                     }
                 }
             }
@@ -113,6 +113,7 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
 
     override fun LiveViewState.init(props: ContentProps) {
         layoutState = SavedState.restore(dataKey) ?: LayoutState()
+        sources = layoutState.layout.getStates(this@LiveView)
     }
 
     private fun saveMyStuff() {
@@ -129,7 +130,7 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
     }
 
     override fun RBuilder.renderContent() {
-        val allStreams = props.api.allStreams
+        val streamList = props.api.allStreams
         styledDiv {
             state.layoutState.layout.let { layout ->
                 val arrangement = layout.arrangement
@@ -170,48 +171,17 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
                                 gridRowEnd = GridRowEnd("${arrangement.rows}")
                             }
                         }
-                        val sourceKey = layout.sources[index]
-                        val stream = allStreams[sourceKey]
-                        styledSelect {
-                            css {
-                                textAlign = TextAlign.center
-                                backgroundColor = Theme().header.backgroundColor
-                                color = Theme().header.textColor
-                                padding(0.5.rem)
-                            }
-                            attrs {
-                                value = sourceKey
-                                onChangeFunction = {
-                                    val value = it.currentTarget.unsafeCast<HTMLSelectElement>().value
-                                    applyState {
-                                        layoutState.layout.sources[index] = value
-                                    }
-                                }
-                            }
-                            option {
-                                attrs {
-                                    value = ""
-                                }
-                                +"Select stream"
-                            }
-                            allStreams.forEach {
-                                option {
-                                    attrs {
-                                        value = it.key
-                                    }
-                                    +it.value.toString()
-                                }
-                            }
-                        }
-
                         child(LivePlayer::class) {
                             attrs {
                                 playerKey = "live-player-$index"
-                                source = stream?.let { LiveSourceFactory.getSource(it) }
+                                source = state.sources[index]
                                 showControls = true
                                 height = if (index == 0) pHeight0 else pHeight
+                                allStreams = streamList
+                                overlay = true
                             }
                         }
+
                     }
                 }
             }
@@ -232,7 +202,27 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
     }
 
     @Serializable
-    data class Layout(val name: String, val key: String, val arrangement: Arrangement, val sources: MutableList<String>)
+    open class Layout(
+        val name: String,
+        val key: String,
+        val arrangement: Arrangement,
+        open val sources: MutableList<String>
+    ) {
+        inner class Source(private val index: Int, component: RComponent<out Props, out State>) :
+            StateValue<String>(component) {
+            override var _field: String
+                get() = sources[index]
+                set(value) {
+                    sources[index] = value
+                }
+        }
+
+        fun getStates(component: RComponent<out Props, out State>): List<Source> {
+            return sources.indices.map { index ->
+                Source(index, component)
+            }
+        }
+    }
 
     @Serializable
     data class LayoutState(
@@ -240,15 +230,15 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
         var current: String = layouts.first().key
     ) {
         val layout get() = layouts.first { it.key == current }
+
     }
 
     companion object {
         const val dataKey = "liveViewLayouts"
-
-
     }
 }
 
 external interface LiveViewState : State {
     var layoutState: LiveView.LayoutState
+    var sources: List<LiveView.Layout.Source>
 }

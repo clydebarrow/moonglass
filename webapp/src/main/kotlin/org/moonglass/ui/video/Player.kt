@@ -45,10 +45,8 @@ external interface PlayerProps : Props {
     var source: RecordingSource?
 }
 
-external interface PlayerState : State {
-}
 
-class Player(props: PlayerProps) : RComponent<PlayerProps, PlayerState>(props) {
+class Player(props: PlayerProps) : RComponent<PlayerProps, State>(props) {
     override fun RBuilder.render() {
         styledVideo {
             css {

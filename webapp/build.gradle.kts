@@ -32,6 +32,8 @@ buildscript {
 val kotlinVersion: String = org.jetbrains.kotlin.config.KotlinCompilerVersion.VERSION
 println("Kotlin version used is $kotlinVersion")
 
+// the kotlin version derived above can't be used in the plugins block because of evaluation order. But using
+// the version from `Plugins.kotlin` seems to work fine.
 plugins {
     kotlin("js") version Plugins.kotlin.version
     kotlin("plugin.serialization") version Plugins.kotlin.version
@@ -102,13 +104,14 @@ dependencies {
  * accordingly.
  */
 val hashedFileTypes = setOf("js", "css")
+val releaseDir = File(projectDir, "build/release")
 
 val buildRelease by tasks.registering(Sync::class) {
     description = "Creates a production webpack with content-hashed files."
-    val bpw = tasks.getByPath("browserProductionWebpack")
-    dependsOn(bpw)
+    dependsOn("browserProductionWebpack")
+    // it would be nice to be able to get this directly from `browserProductionWebpack`, but...
     from(File(projectDir, "build/distributions"))
-    into(File(projectDir, "build/release"))
+    into(releaseDir)
     val nameMap = mutableMapOf<String, String>()
     doFirst {
         // collect the new names.
@@ -138,7 +141,7 @@ val buildRelease by tasks.registering(Sync::class) {
 localProperties["deployTarget"]?.also { deployTarget ->
     tasks.register<Exec>("deploy") {
         dependsOn(buildRelease)
-        workingDir(File(projectDir, "build/release"))
+        workingDir(releaseDir)
         commandLine("sh", "-c", "scp -r * '$deployTarget'")
     }
 }
@@ -147,7 +150,8 @@ localProperties["deployTarget"]?.also { deployTarget ->
 kotlin {
     sourceSets.all {
         languageSettings.apply {
-            useExperimentalAnnotation("kotlin.time.ExperimentalTime")
+            optIn("kotlin.time.ExperimentalTime")
+            optIn("kotlin.js.ExperimentalJsExport")
         }
     }
 }

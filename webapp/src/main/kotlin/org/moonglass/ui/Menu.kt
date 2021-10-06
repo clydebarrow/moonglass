@@ -23,7 +23,6 @@ import kotlinx.css.LinearDimension
 import kotlinx.css.Overflow
 import kotlinx.css.Position
 import kotlinx.css.TextTransform
-import kotlinx.css.backgroundColor
 import kotlinx.css.borderRadius
 import kotlinx.css.bottom
 import kotlinx.css.color
@@ -33,7 +32,6 @@ import kotlinx.css.fontWeight
 import kotlinx.css.height
 import kotlinx.css.left
 import kotlinx.css.letterSpacing
-import kotlinx.css.maxHeight
 import kotlinx.css.overflow
 import kotlinx.css.padding
 import kotlinx.css.position
@@ -45,7 +43,6 @@ import kotlinx.css.rgba
 import kotlinx.css.right
 import kotlinx.css.textTransform
 import kotlinx.css.top
-import kotlinx.css.vh
 import kotlinx.css.width
 import kotlinx.css.zIndex
 import org.moonglass.ui.utility.StateVar

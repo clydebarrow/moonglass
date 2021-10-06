@@ -24,7 +24,6 @@ import kotlinx.css.FlexDirection
 import kotlinx.css.FlexWrap
 import kotlinx.css.Overflow
 import kotlinx.css.Position
-import kotlinx.css.backgroundColor
 import kotlinx.css.borderColor
 import kotlinx.css.borderRightWidth
 import kotlinx.css.borderStyle
