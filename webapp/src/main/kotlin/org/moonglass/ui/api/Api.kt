@@ -1,17 +1,20 @@
 /*
- * Copyright (c) 2021. Clyde Stubbs
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  * Copyright (c) 2021. Clyde Stubbs
+ *  *
+ *  * Licensed under the Apache License, Version 2.0 (the "License");
+ *  * you may not use this file except in compliance with the License.
+ *  * You may obtain a copy of the License at
+ *  *
+ *  * http://www.apache.org/licenses/LICENSE-2.0
+ *  *
+ *  * Unless required by applicable law or agreed to in writing, software
+ *  * distributed under the License is distributed on an "AS IS" BASIS,
+ *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  * See the License for the specific language governing permissions and
+ *  * limitations under the License.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 package org.moonglass.ui.api
@@ -84,16 +87,6 @@ data class Api(
         val totalSampleFileBytes: Long // 38776002681
     )
 
-    val allStreams: Map<String, Stream>
-        get() {
-            return cameras.map { camera ->
-                camera.streams.map {
-                    Stream(it.key, it.value, camera)
-                }
-            }
-                .flatten()
-                .associateBy { it.key }
-        }
 
     @Serializable
     data class Session(
@@ -110,6 +103,7 @@ data class Api(
     )
 
     companion object {
+
         val client = HttpClient {
             install(HttpTimeout) {
                 requestTimeoutMillis = 10000
@@ -137,16 +131,29 @@ data class Api(
             }
         }
 
+        var allStreams: Map<String, Stream> = mapOf()
+            private set
+
+        private fun Api.updateAllStreams() {
+            allStreams = cameras.map { camera ->
+                camera.streams.map {
+                    Stream(it.key, it.value, camera)
+                }
+            }
+                .flatten()
+                .associateBy { it.key }
+        }
+
         suspend fun fetchApi(): Api? {
             return try {
-                apiCall(true) {
+                apiCall<Api>(true) {
                     get {
                         url {
                             apiConfig("")
                             parameter("days", "true")
                         }
                     }
-                }
+                }?.also { it.updateAllStreams() }
             } catch (ex: ClientRequestException) {
                 if (ex.response.status == HttpStatusCode.Unauthorized)
                     User.showLoginDialog()

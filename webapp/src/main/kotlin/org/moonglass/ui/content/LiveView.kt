@@ -1,17 +1,20 @@
 /*
- * Copyright (c) 2021. Clyde Stubbs
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  * Copyright (c) 2021. Clyde Stubbs
+ *  *
+ *  * Licensed under the Apache License, Version 2.0 (the "License");
+ *  * you may not use this file except in compliance with the License.
+ *  * You may obtain a copy of the License at
+ *  *
+ *  * http://www.apache.org/licenses/LICENSE-2.0
+ *  *
+ *  * Unless required by applicable law or agreed to in writing, software
+ *  * distributed under the License is distributed on an "AS IS" BASIS,
+ *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  * See the License for the specific language governing permissions and
+ *  * limitations under the License.
  *
- * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 package org.moonglass.ui.content
@@ -59,7 +62,7 @@ import org.moonglass.ui.name
 import org.moonglass.ui.useColorSet
 import org.moonglass.ui.utility.SavedState
 import org.moonglass.ui.utility.StateValue
-import org.moonglass.ui.video.LivePlayer
+import org.moonglass.ui.video.StreamPlayer
 import org.w3c.dom.HTMLSelectElement
 import react.Props
 import react.RBuilder
@@ -130,7 +133,6 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
     }
 
     override fun RBuilder.renderContent() {
-        val streamList = props.api.allStreams
         styledDiv {
             state.layoutState.layout.let { layout ->
                 val arrangement = layout.arrangement
@@ -171,13 +173,11 @@ class LiveView(props: ContentProps) : Content<ContentProps, LiveViewState>(props
                                 gridRowEnd = GridRowEnd("${arrangement.rows}")
                             }
                         }
-                        child(LivePlayer::class) {
+                        child(StreamPlayer::class) {
                             attrs {
                                 playerKey = "live-player-$index"
                                 source = state.sources[index]
-                                showControls = true
                                 height = if (index == 0) pHeight0 else pHeight
-                                allStreams = streamList
                                 overlay = true
                             }
                         }
