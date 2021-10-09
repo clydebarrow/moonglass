@@ -21,10 +21,19 @@ import kotlinx.browser.window
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.api.RecList
 import org.moonglass.ui.api.apiConfig
+import org.moonglass.ui.api.duration
 import org.moonglass.ui.formatDate
 import org.moonglass.ui.formatTime
-import org.moonglass.ui.url
 
+/**
+ * An object representing a stream in the NVR.
+ * @param name The stream name (typically "sub" or "main")
+ * @param metaData Useful information about the stream. See [Api.StreamData]
+ * @param camera The camera to which the stream belongs
+ *
+ * @property key A string key that uniquely identifies this stream. Can be used to index
+ *               the Api.allStreams map
+ */
 data class Stream(val name: String, val metaData: Api.StreamData, val camera: Api.Camera) {
     val key = "${camera.uuid}/${name}"
     override fun equals(other: Any?): Boolean {
@@ -40,19 +49,31 @@ data class Stream(val name: String, val metaData: Api.StreamData, val camera: Ap
         return key.hashCode()
     }
 
+    /**
+     * Retrieve a descriptive filename for a given recording.
+     */
     fun filename(recording: RecList.Recording): String {
         return camera.shortName + "-" + name + "-" +
             recording.startTime90k.formatDate + "-" +
             recording.startTime90k.formatTime + recording.endTime90k.formatTime + ".mp4"
     }
 
-    fun url(recording: RecList.Recording, subTitle: Boolean): String {
-        val params = mutableMapOf<String, String?>(
-            "s" to "${recording.startId}-${recording.endId}@${recording.openId}"
+
+    fun url(
+        recording: RecList.Recording,
+        subTitle: Boolean = false,
+        startOffset: Int = 0,
+        endOffset: Int = recording.duration.inWholeSeconds.toInt()
+    ): String {
+        return Api.recordingUrl(
+            key,
+            recording.startId,
+            recording.endId,
+            recording.openId,
+            subTitle,
+            startOffset,
+            endOffset
         )
-        if (subTitle)
-            params["ts"] = null
-        return "/api/cameras/$key/view.mp4".url(params)
     }
 
     val wsUrl = window.location.let {
@@ -64,6 +85,8 @@ data class Stream(val name: String, val metaData: Api.StreamData, val camera: Ap
     override fun toString(): String {
         return "${camera.shortName} ($name)"
     }
+
+
 }
 
 /**

@@ -74,20 +74,17 @@ import org.moonglass.ui.api.RecList
 import org.moonglass.ui.applyState
 import org.moonglass.ui.as90k
 import org.moonglass.ui.name
-import org.moonglass.ui.plusHours
-import org.moonglass.ui.plusSeconds
 import org.moonglass.ui.useColorSet
 import org.moonglass.ui.utility.SavedState
+import org.moonglass.ui.utility.SavedState.restore
 import org.moonglass.ui.utility.StateValue
 import org.moonglass.ui.utility.StateVar
-import org.moonglass.ui.utility.StateVar.Companion.createValue
-import org.moonglass.ui.video.StreamPlayer
-import org.moonglass.ui.video.Player
 import org.moonglass.ui.video.RecordingSource
+import org.moonglass.ui.video.StreamPlayer
+import org.moonglass.ui.video.UrlPlayer
 import org.moonglass.ui.widgets.recordings.CameraList
 import org.moonglass.ui.widgets.recordings.DateTimeSelector
 import org.moonglass.ui.widgets.recordings.Stream
-import org.moonglass.ui.withTime
 import react.RBuilder
 import react.State
 import styled.css
@@ -100,49 +97,31 @@ external interface RecordingsState : State {
     var recLists: MutableMap<String, RecList>
 
     // time selector state
-    var startDate: StateVar<Date>
-    var startTime: StateVar<Int>      // time of day in seconds
-    var endTime: StateVar<Int>        // also inseconds
-    var maxDuration: StateVar<Int>
-    var trimEnds: StateVar<Boolean>
-    var subTitle: StateVar<Boolean>
-    var expanded: StateVar<Boolean>
+    var selectorState: DateTimeSelector.SelectorState
 
     var recordingSource: RecordingSource?
     var liveSource: StateValue<String>
 }
 
 val RecordingsState.startDateTime: Date
-    get() = startDate().plusSeconds(startTime())
+    get() = selectorState.startDateTime
 
 val RecordingsState.endDateTime: Date
     get() {
-        if (startTime() >= endTime())
-            return startDate().plusHours(24).plusSeconds(endTime())
-        return startDate().plusSeconds(endTime())
+        return selectorState.endDateTime
     }
 
 @Serializable
 data class SavedRecordingState(
     val selectedStreams: List<String> = listOf(),
-    var expanded: Boolean = false,
-    var startTime: Int = 0,
-    var endTime: Int = 24 * 60 * 60 - 1,
-    var maxDuration: Int = 1,
-    var trimEnds: Boolean = true,
-    var subTitle: Boolean = false
+    var dateTimeState: DateTimeSelector.Saved = DateTimeSelector.Saved()
 
 ) {
     companion object {
         fun from(state: RecordingsState): SavedRecordingState {
             return SavedRecordingState(
                 state.selectedStreams.toList(),
-                state.expanded(),
-                state.startTime(),
-                state.endTime(),
-                state.maxDuration(),
-                state.trimEnds(),
-                state.subTitle()
+                DateTimeSelector.Saved.from(state.selectorState)
             )
         }
     }
@@ -153,7 +132,6 @@ data class SavedRecordingState(
 @JsExport
 class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(props) {
 
-
     private fun saveMyStuff() {
         SavedState.save(
             saveKey,
@@ -163,48 +141,32 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
 
     private fun RecordingsState.copyFrom(saved: SavedRecordingState) {
         selectedStreams = saved.selectedStreams.toMutableSet()
-        maxDuration = createValue(saved.maxDuration)
-        trimEnds = createValue(saved.trimEnds)
-        subTitle = createValue(saved.subTitle)
-        startTime = createValue(saved.startTime)
-        endTime = createValue(saved.endTime)
-        expanded = createValue(saved.expanded)
+        selectorState = saved.dateTimeState.getState(this@Recordings)
     }
 
 
     override fun componentDidMount() {
-        instance = this@Recordings
         SavedState.addOnUnload(::saveMyStuff)
     }
 
     override fun componentWillUnmount() {
         saveMyStuff()
         SavedState.removeOnUnload(::saveMyStuff)
-        instance = null
     }
 
     private val cameras: Map<Api.Camera, List<Stream>>
         get() {
-            return props.api.cameras.map { camera ->
-                camera to camera.streams.map {
+            return props.api.cameras.associateWith { camera ->
+                camera.streams.map {
                     Stream(it.key, it.value, camera)
                 }
-            }.toMap()
+            }
         }
 
     override fun RecordingsState.init(props: ContentProps) {
         recLists = mutableMapOf()
-        val restored = try {
-            SavedState.restore(saveKey) ?: SavedRecordingState()
-        } catch (ex: Exception) {
-            SavedState.save(saveKey, SavedRecordingState())
-            SavedRecordingState()
-        }
-        copyFrom(restored)
-        startDate = createValue(Date().withTime(0, 0))
-        listOf(maxDuration, startTime, endTime, startDate, trimEnds).forEach {
-            it.listener = { updateRecordings(true) }
-        }
+        copyFrom(saveKey.restore { SavedRecordingState() })
+        selectorState.listener = { updateRecordings(true) }
         liveSource = StateVar("", this@Recordings)
     }
 
@@ -229,20 +191,20 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
             // insert an empty list to prevent repeating the fetch below if render is called again before we finish.
             needy.forEach { state.recLists[it.key] = RecList() }
             MainScope().launch {
-                val updates = needy.map { cameraStream ->
+                val updates = needy.mapNotNull { cameraStream ->
                     Api.fetchRecording(
                         cameraStream,
                         state.startDateTime,
                         state.endDateTime,
-                        Duration.hours(state.maxDuration())
+                        Duration.hours(state.selectorState.maxDuration())
                     )?.let { data ->
                         console.log("Fetched ${data.recordings.size} recordings for $cameraStream")
                         Pair(cameraStream.key, data)
                     }
-                }.filterNotNull()
+                }
                 applyState {
                     selectedStreams =
-                        selectedStreams.filter { it in Api.allStreams.map { it.key } }.toMutableSet()
+                        selectedStreams.filter { stream -> stream in Api.allStreams.map { it.key } }.toMutableSet()
                     recLists.putAll(updates)
                 }
             }
@@ -252,13 +214,8 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
     override fun RBuilder.renderNavBarWidget() {
         child(DateTimeSelector::class) {
             attrs {
-                expanded = state.expanded
-                startTime = state.startTime
-                endTime = state.endTime
-                startDate = state.startDate
-                maxDuration = state.maxDuration
-                trimEnds = state.trimEnds
-                subTitle = state.subTitle
+                data = state.selectorState
+                showDuration = true
             }
         }
     }
@@ -344,24 +301,24 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                                         }
                                     }
                                     showRecording = {
-                                        state.expanded.value = false        //
+                                        state.selectorState.expanded.value = false        //
+                                        state.liveSource.value = ""
                                         applyState {
-                                            liveSource.value = ""
                                             recordingSource = it
                                         }
                                     }
                                     showLive = {
-                                        state.expanded.value = false        //
+                                        state.selectorState.expanded.value = false        //
+                                        state.liveSource.value = it
                                         applyState {
                                             recordingSource = null
-                                            liveSource.value = it
                                         }
                                     }
                                     selectedStreams = state.selectedStreams
                                     maxEnd = state.maxEndDateTime
                                     minStart = state.minStartDateTime
                                     playingRecording = state.recordingSource?.recording
-                                    subTitle = state.subTitle()
+                                    subTitle = state.selectorState.subTitle()
                                 }
                             }
                         }
@@ -395,18 +352,18 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                             height = 100.pct
                         }
 
-                        styledDiv {
-                            css {
-                                fontSize = 1.2.rem
-                                textAlign = TextAlign.center
-                                backgroundColor = Theme().header.backgroundColor
-                                color = Theme().header.textColor
-                            }
-                            +(state.recordingSource?.caption ?: state.liveSource.value)
-                        }
-
                         if (state.recordingSource != null) {
-                            child(Player::class) {
+                            styledDiv {
+                                css {
+                                    fontSize = 1.2.rem
+                                    textAlign = TextAlign.center
+                                    backgroundColor = Theme().header.backgroundColor
+                                    color = Theme().header.textColor
+                                }
+                                +(state.recordingSource?.caption ?: state.liveSource.value)
+                            }
+
+                            child(UrlPlayer::class) {
                                 attrs {
                                     height = ResponsiveLayout.contentHeight - 3.rem
                                     source = state.recordingSource
@@ -416,7 +373,7 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                         } else {
                             child(StreamPlayer::class) {
                                 attrs {
-                                    height = ResponsiveLayout.contentHeight - 3.rem
+                                    height = ResponsiveLayout.contentHeight - 4.rem
                                     source = state.liveSource
                                     overlay = false
                                 }
@@ -430,11 +387,8 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
 
     companion object {
         const val saveKey = "recordingsSaveKey"
-
-        var instance: Recordings? = null
-
     }
 }
 
-val RecordingsState.maxEndDateTime get() = if (trimEnds()) endDateTime.as90k else Long.MAX_VALUE
-val RecordingsState.minStartDateTime get() = if (trimEnds()) startDateTime.as90k else 0
+val RecordingsState.maxEndDateTime get() = if (selectorState.trimEnds()) endDateTime.as90k else Long.MAX_VALUE
+val RecordingsState.minStartDateTime get() = if (selectorState.trimEnds()) startDateTime.as90k else 0

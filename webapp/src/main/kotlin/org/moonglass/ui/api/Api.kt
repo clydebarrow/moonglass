@@ -35,12 +35,16 @@ import io.ktor.http.URLProtocol
 import io.ktor.http.contentType
 import io.ktor.utils.io.core.toByteArray
 import kotlinx.browser.window
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.moonglass.ui.App
 import org.moonglass.ui.Duration90k
 import org.moonglass.ui.Time90k
 import org.moonglass.ui.as90k
+import org.moonglass.ui.plusHours
+import org.moonglass.ui.plusSeconds
+import org.moonglass.ui.url
 import org.moonglass.ui.user.User
 import org.moonglass.ui.widgets.Toast
 import org.moonglass.ui.widgets.recordings.Stream
@@ -63,7 +67,7 @@ data class Api(
         val description: String = "", // Hikvision Driveway Camera
         val shortName: String = "", // Driveway
         val streams: Map<String, StreamData> = mapOf(),
-        val uuid: String // 7f2e2a50-1e68-4647-817b-03089ca2003e
+        val uuid: String = "" // 7f2e2a50-1e68-4647-817b-03089ca2003e
     )
 
     @Serializable
@@ -78,13 +82,13 @@ data class Api(
     data class StreamData(
         val id: Int = 0,
         val days: Map<String, Day> = mapOf(),
-        val fsBytes: Long, // 38785380352
-        val maxEndTime90k: Long?, // 146704410690765
-        val minStartTime90k: Long?, // 146678775676182
-        val record: Boolean, // true
-        val retainBytes: Long, // 107374182400
-        val totalDuration90k: Long, // 24637266927
-        val totalSampleFileBytes: Long // 38776002681
+        val fsBytes: Long = 0, // 38785380352
+        val maxEndTime90k: Long? = null, // 146704410690765
+        val minStartTime90k: Long? = null, // 146678775676182
+        val record: Boolean = false, // true
+        val retainBytes: Long = 0, // 107374182400
+        val totalDuration90k: Long = 0, // 24637266927
+        val totalSampleFileBytes: Long = 0 // 38776002681
     )
 
 
@@ -116,24 +120,35 @@ data class Api(
          * If the return type is nullable, a failure will return null, otherwise the exception will be rethrown
          */
         private inline fun <reified T : Any> apiCall(rethrow: Boolean = false, block: HttpClient.() -> T): T? {
+            console.log("In apiCall")
             App.setRefresh(T::class.simpleName.toString(), true)
             return try {
                 client.run {
                     block()
                 }
             } catch (ex: Exception) {
-                if (rethrow)
-                    throw(ex)
-                Toast.toast("${ex.message}")
+                if (ex !is CancellationException) {
+                    if (rethrow)
+                        throw(ex)
+                    Toast.toast("${ex.message}")
+                } else
+                    console.log(ex.toString())
                 null
             } finally {
                 App.setRefresh(T::class.simpleName.toString(), false)
             }
         }
 
+        /**
+         * A list of all the streams, mapped by key, in the latest version of the API data found.
+         *
+         */
         var allStreams: Map<String, Stream> = mapOf()
             private set
 
+        /**
+         * Updates `allStreams` after the Api is refreshed.
+         */
         private fun Api.updateAllStreams() {
             allStreams = cameras.map { camera ->
                 camera.streams.map {
@@ -144,6 +159,9 @@ data class Api(
                 .associateBy { it.key }
         }
 
+        /**
+         * Fetch the top-level Moonfire API data.
+         */
         suspend fun fetchApi(): Api? {
             return try {
                 apiCall<Api>(true) {
@@ -188,6 +206,10 @@ data class Api(
             }
         }
 
+        /**
+         * Tell the backend to cancel this login token
+         * @param csrf The login token
+         */
         suspend fun logout(csrf: String) {
             apiCall {
                 post<HttpResponse> {
@@ -217,7 +239,7 @@ data class Api(
             stream: Stream,
             startTime: Date,
             endTime: Date,
-            maxDuration: Duration
+            maxDuration: Duration? = null
         ): RecList? {
             return apiCall {
                 get {
@@ -227,9 +249,68 @@ data class Api(
                     }
                     parameter("startTime90k", startTime.as90k)
                     parameter("endTime90k", endTime.as90k)
-                    parameter("split90k", maxDuration.as90k)
+                    maxDuration?.let {
+                        parameter("split90k", it.as90k)
+                    }
                 }
             }
+        }
+
+        /**
+         * As above, with a base date, a start and end time.
+         *
+         * @param stream The stream to fetch
+         * @param startDate The date to fetch - expected to represent 00:00 on a given date
+         * @param startTime The start time in seconds offset from the startDate
+         * @param endTime The end time in seconds - if less than startTime it
+         *                is interpreted as being on the following day
+         */
+        suspend fun fetchRecording(
+            stream: Stream,
+            startDate: Date,
+            startTime: Int,     // seconds
+            endTime: Int
+        ): RecList? {
+            val endDateTime = if (startTime >= endTime)
+                startDate.plusHours(24).plusSeconds(endTime)
+            else startDate.plusSeconds(endTime)
+            return fetchRecording(stream, startDate.plusSeconds(startTime), endDateTime)
+        }
+
+        /**
+         * Construct a URL to refer to a recording, possibly spanning ids
+         *
+         * @param startId The ID of the start of the recording
+         * @param endId The ID of the last recording segment - defaults to the startId
+         * @param openId An optional openId to disambiguate recordings across reboots
+         * @param subTitle If set, will add timestamp captions
+         * @param startOffset The offset in seconds from the start of the recording to commence playback
+         * @param endOffset The offset in seconds for the end of the recording.
+         *
+         */
+        fun recordingUrl(
+            key: String,
+            startId: Int,
+            endId: Int = startId,
+            openId: Int? = null,
+            subTitle: Boolean = false,
+            startOffset: Int? = null,
+            endOffset: Int? = null
+        ): String {
+            val builder = StringBuilder("$startId-$endId")
+            openId?.let {
+                builder.append("@$openId")
+            }
+            startOffset?.let {
+                require(endOffset != null)          // required currently due to bug in server
+                builder.append(".${it * 90000L}-${endOffset * 90000L}")
+            }
+            val params = mutableMapOf<String, String?>(
+                "s" to builder.toString()
+            )
+            if (subTitle)
+                params["ts"] = null
+            return "/api/cameras/$key/view.mp4".url(params)
         }
     }
 }

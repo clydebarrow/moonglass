@@ -17,14 +17,14 @@
 package org.moonglass.ui.video
 
 import org.moonglass.ui.api.RecList
-import org.moonglass.ui.api.getEndTime
-import org.moonglass.ui.api.getStartDate
-import org.moonglass.ui.api.getStartTime
+import org.moonglass.ui.api.formatEndTime
+import org.moonglass.ui.api.formatStartDate
+import org.moonglass.ui.api.formatStartTime
 import org.moonglass.ui.widgets.recordings.Stream
 
 class RecordingSource(stream: Stream, val recording: RecList.Recording, subTitle: Boolean) : VideoSource {
 
-    override val caption = "$stream ${recording.getStartDate()} ${recording.getStartTime()}-${recording.getEndTime()}"
+    override val caption = "$stream ${recording.formatStartDate()} ${recording.formatStartTime()}-${recording.formatEndTime()}"
     val srcUrl: String = stream.url(recording, subTitle)
 
 }

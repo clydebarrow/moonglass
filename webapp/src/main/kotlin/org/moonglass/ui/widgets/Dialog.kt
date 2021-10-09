@@ -63,6 +63,7 @@ import org.moonglass.ui.cardStyle
 import org.moonglass.ui.name
 import org.moonglass.ui.useColorSet
 import org.moonglass.ui.utility.SavedState
+import org.moonglass.ui.utility.SavedState.restore
 import org.w3c.dom.HTMLInputElement
 import org.w3c.dom.HTMLSelectElement
 import org.w3c.dom.events.Event
@@ -162,12 +163,12 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
 
     abstract val items: List<Entry>
 
-    val saveKey get() = "Dialog-$title"
+    private val saveKey get() = "Dialog-$title"
 
     val inputData by lazy {
         items.associate { it.key to it.defaultValue }.toMutableMap().also { data ->
             try {
-                SavedState.restore<SavedData>(saveKey)?.let { savedData ->
+                saveKey.restore { SavedData() }.let { savedData ->
                     data.filter { it.value.isBlank() }.map { it.key }.forEach { key ->
                         savedData.data[key]?.let { data[key] = it }
                     }
@@ -341,7 +342,7 @@ abstract class Dialog(props: ModalProps) : Modal<DialogState>(props) {
     }
 
     @Serializable
-    private data class SavedData(val data: Map<String, String>)
+    private data class SavedData(val data: Map<String, String> = mapOf())
 }
 
 external interface DialogState : State {

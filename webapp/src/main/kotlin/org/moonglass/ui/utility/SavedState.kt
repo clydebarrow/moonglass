@@ -16,6 +16,7 @@
 
 package org.moonglass.ui.utility
 
+import kotlinext.js.jso
 import kotlinx.browser.window
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -30,24 +31,18 @@ object SavedState {
 
     /**
      * Restore state from localstorage
-     * @param key The storage key to use
-     * @return The saved object, or null if not saved
+     * @receiver The storage key to use
+     * @param default A block to create a default value
+     * @return The saved object, or the default
      */
-    inline fun <reified T : Any> restore(key: String): T? {
+
+    inline fun <reified T : Any> String.restore(default: () -> T ): T {
         return try {
-            window.localStorage.getItem(key)?.let { Json.decodeFromString(it) }
+            window.localStorage.getItem(this)?.let { Json.decodeFromString(it) }
         } catch (ex: Exception) {
             console.log(ex.toString())
             null
-        }
-    }
-
-    /**
-     * Get saved state, providing a default value getter
-     */
-
-    inline fun <reified T : Any> String.restore(default: () -> T): T {
-        return restore(this) ?: default()
+        } ?: default()
     }
 
     /**
@@ -57,7 +52,6 @@ object SavedState {
      */
     inline fun <reified T : Any> save(key: String, data: T) {
         try {
-            val str = Json.encodeToString(data)
             console.log("Saving key $key -> $data")
             window.localStorage.setItem(key, Json.encodeToString(data))
         } catch (ex: Exception) {

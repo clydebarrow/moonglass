@@ -21,6 +21,7 @@ import org.moonglass.ui.utility.StateVar
 import react.Props
 import react.RBuilder
 import react.RComponent
+import react.RPureComponent
 import react.State
 
 external interface ContentProps : Props {

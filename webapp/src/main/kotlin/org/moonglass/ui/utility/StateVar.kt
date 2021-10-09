@@ -17,6 +17,7 @@
 package org.moonglass.ui.utility
 
 import org.moonglass.ui.applyState
+import react.Component
 import react.Props
 import react.RComponent
 import react.State
@@ -25,7 +26,7 @@ import react.State
  * This class is used to store values that can be passed to a child wrapped in a way that allows it to update the value.
  */
 
-abstract class StateValue<T : Any>(val component: RComponent<out Props, out State>) {
+abstract class StateValue<T : Any>(val component: Component<out Props, out State>) {
 
     protected abstract var _field: T
     operator fun invoke() = _field
@@ -45,7 +46,7 @@ abstract class StateValue<T : Any>(val component: RComponent<out Props, out Stat
 /**
  * A StateValue backed by a simple variable with an initial value
  */
-open class StateVar<T : Any>(initialValue: T, component: RComponent<out Props, out State>) :
+open class StateVar<T : Any>(initialValue: T, component: Component<out Props, out State>) :
     StateValue<T>(component) {
 
     override var _field: T = initialValue
@@ -55,7 +56,7 @@ open class StateVar<T : Any>(initialValue: T, component: RComponent<out Props, o
      * Convenience function to create a StateVar inside a component, typically used inside init()
      */
     companion object {
-        fun <T : Any> RComponent<out Props, out State>.createValue(value: T): StateVar<T> {
+        fun <T : Any> Component<out Props, out State>.createValue(value: T): StateVar<T> {
             return StateVar(value, this)
         }
     }

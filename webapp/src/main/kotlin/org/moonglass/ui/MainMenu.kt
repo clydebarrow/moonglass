@@ -17,6 +17,7 @@
 package org.moonglass.ui
 
 import org.moonglass.ui.content.LiveView
+import org.moonglass.ui.content.PlaybackView
 import org.moonglass.ui.content.Recordings
 import org.moonglass.ui.widgets.Toast
 import react.State
@@ -62,8 +63,9 @@ object MainMenu {
         MenuGroup(
             "Video",
             listOf(
-                MainMenuItem("Recordings", Recordings::class) { App.refreshAll() },
+                MainMenuItem("Playback", PlaybackView::class) { App.refreshAll() },
                 MainMenuItem("Live view", LiveView::class),
+                MainMenuItem("Recordings", Recordings::class) { App.refreshAll() },
             )
         ),
         MenuGroup(

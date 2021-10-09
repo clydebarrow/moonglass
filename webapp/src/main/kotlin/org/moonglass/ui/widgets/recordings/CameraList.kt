@@ -56,9 +56,9 @@ import org.moonglass.ui.api.Api
 import org.moonglass.ui.api.RecList
 import org.moonglass.ui.api.bitrate
 import org.moonglass.ui.api.fps
-import org.moonglass.ui.api.getEndTime
-import org.moonglass.ui.api.getStartDate
-import org.moonglass.ui.api.getStartTime
+import org.moonglass.ui.api.formatEndTime
+import org.moonglass.ui.api.formatStartDate
+import org.moonglass.ui.api.formatStartTime
 import org.moonglass.ui.api.storage
 import org.moonglass.ui.asBitRate
 import org.moonglass.ui.asSize
@@ -135,7 +135,9 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
         styledDiv {
             name = "streamHeader"
             attrs {
-                onClickFunction = { props.toggleStream(stream.key) }
+                onClickFunction = {
+                    console.log("onclick")
+                    props.toggleStream(stream.key) }
             }
             css {
                 display = Display.flex
@@ -221,14 +223,14 @@ class CameraList(props: CameraListProps) : RComponent<CameraListProps, CameraLis
                             backgroundColor = Theme().subHeader.selectedBackgroundColor
                     }
                     with(recording) {
-                        column(getStartDate(props.minStart), 0.30, JustifyContent.start)
+                        column(formatStartDate(props.minStart), 0.30, JustifyContent.start)
                         column(
-                            "${getStartTime(props.minStart)} - ${getEndTime(props.maxEnd)}",
+                            "${formatStartTime(props.minStart)} - ${formatEndTime(props.maxEnd)}",
                             0.40,
                             JustifyContent.center
                         )
                     }
-                    styledA(href = stream.url(recording, false)) {
+                    styledA(href = stream.url(recording)) {
                         attrs["download"] = stream.filename(recording)
                         attrs {
                             onClickFunction = { it.stopPropagation() }

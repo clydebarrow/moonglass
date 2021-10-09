@@ -22,6 +22,7 @@ import org.moonglass.ui.Theme
 import org.moonglass.ui.data.DateFormat
 import org.moonglass.ui.data.TimeFormat
 import org.moonglass.ui.utility.SavedState
+import org.moonglass.ui.utility.SavedState.restore
 import org.moonglass.ui.widgets.Dialog
 
 @Serializable
@@ -32,7 +33,7 @@ class UserPreferences {
 
     companion object {
         const val saveKey = "userPreferences"
-        var current = SavedState.restore(saveKey) ?: UserPreferences()
+        var current = saveKey.restore { UserPreferences() }
 
         operator fun invoke() = current
 

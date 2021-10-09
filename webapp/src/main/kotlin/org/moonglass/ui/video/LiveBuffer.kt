@@ -34,7 +34,7 @@ import org.w3c.dom.mediasource.get
 import org.w3c.dom.url.URL
 
 /**
- * Cache mediaSource for a given source.
+ * Cache mediaSource for a given stream.
  */
 class LiveBuffer : StreamSource {
     private var source: Stream? = null
@@ -43,7 +43,8 @@ class LiveBuffer : StreamSource {
     private val bufferQueue = ArrayDeque<ByteArray>()
     private lateinit var contentType: String
 
-    override fun getSrcUrl(source: Stream): String {
+    override suspend fun getSrcUrl(source: Stream?): String? {
+        if(source == null) return null
         mediaSource?.let {
             if (source == this.source) return srcUrl
             it.onsourceopen = null
@@ -138,7 +139,7 @@ class LiveBuffer : StreamSource {
             job = scope.launch {
                 LiveSourceFactory.getSource(stream).dataFlow.collect { data ->
                     contentType = data.contentType
-                    if (bufferQueue.size < StreamPlayer.MAX_BUFFER)
+                    if (bufferQueue.size < MAX_BUFFER)
                         bufferQueue.add(data.data)
                     else
                         console.log("Dropped buffer")
@@ -153,5 +154,8 @@ class LiveBuffer : StreamSource {
     override fun close() {
         job?.cancel()
         job = null
+    }
+    companion object {
+        const val MAX_BUFFER = 10
     }
 }

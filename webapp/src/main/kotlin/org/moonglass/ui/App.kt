@@ -34,6 +34,7 @@ import kotlinx.css.width
 import kotlinx.css.zIndex
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.utility.SavedState
+import org.moonglass.ui.utility.SavedState.restore
 import org.moonglass.ui.utility.StateVar
 import org.moonglass.ui.widgets.Dialog
 import org.moonglass.ui.widgets.LiveStats
@@ -65,7 +66,7 @@ external interface AppState : State {
 class App() : RComponent<Props, AppState>() {
 
     private fun restoreShowing(): MainMenu.MainMenuItem {
-        val old: String? = SavedState.restore(appComponentKey)
+        val old: String = appComponentKey.restore { "" }
         return MainMenu.getItem(old)
     }
 

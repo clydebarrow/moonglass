@@ -49,6 +49,7 @@ import kotlinx.html.IMG
 import kotlinx.html.js.onClickFunction
 import kotlinx.serialization.decodeFromString
 import org.moonglass.ui.user.UserPreferences
+import react.Component
 import react.Props
 import react.RBuilder
 import react.RComponent
@@ -80,7 +81,7 @@ object Extensions {
  * @param callback An optional callback that will be executed after the state update is done.
  * @param handler A block to mutate the state.
  */
-fun <T : State, P : Props> RComponent<P, T>.applyState(callback: (() -> Unit)? = null, handler: T.() -> Unit) {
+fun <T : State, P : Props> Component<P, T>.applyState(callback: (() -> Unit)? = null, handler: T.() -> Unit) {
     if (callback == null)
         setState({ newState ->
             newState.apply(handler)
@@ -121,6 +122,7 @@ val Duration90k?.toDuration: Duration
         return Duration.seconds(this / 90000.0)
     }
 
+val Time90k.toSeconds get() = this / 90000.0
 
 val Time90k.asDate get() = Date(this / 90)
 

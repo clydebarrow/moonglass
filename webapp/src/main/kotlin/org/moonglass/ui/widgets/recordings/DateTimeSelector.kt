@@ -43,6 +43,7 @@ import kotlinx.css.zIndex
 import kotlinx.html.id
 import kotlinx.html.js.onChangeFunction
 import kotlinx.html.js.onClickFunction
+import kotlinx.serialization.Serializable
 import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.cardStyle
@@ -50,13 +51,17 @@ import org.moonglass.ui.dismisser
 import org.moonglass.ui.formatDate
 import org.moonglass.ui.formatHhMm
 import org.moonglass.ui.name
+import org.moonglass.ui.plusHours
+import org.moonglass.ui.plusSeconds
 import org.moonglass.ui.style.checkBox
 import org.moonglass.ui.style.expandButton
 import org.moonglass.ui.style.shrinkable
 import org.moonglass.ui.useColorSet
 import org.moonglass.ui.utility.StateVar
 import org.moonglass.ui.widgets.timePicker
+import org.moonglass.ui.withTime
 import org.w3c.dom.HTMLSelectElement
+import react.Component
 import react.Props
 import react.RBuilder
 import react.RComponent
@@ -72,13 +77,8 @@ import styled.styledSelect
 import kotlin.js.Date
 
 external interface DateTimeSelectorProps : Props {
-    var expanded: StateVar<Boolean>
-    var startTime: StateVar<Int>
-    var endTime: StateVar<Int>
-    var startDate: StateVar<Date>
-    var maxDuration: StateVar<Int>
-    var trimEnds: StateVar<Boolean>
-    var subTitle: StateVar<Boolean>
+    var showDuration: Boolean                   // if max duration should be shown
+    var data: DateTimeSelector.SelectorState
 }
 
 class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
@@ -88,7 +88,7 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
             preventDefault()
             stopPropagation()
             when (key) {
-                "Escape" -> props.expanded.value = false
+                "Escape" -> props.data.expanded.value = false
             }
         }
     }
@@ -98,7 +98,7 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
             name = "selectedDateTime"
             attrs {
                 onClickFunction = {
-                    props.expanded.value = !props.expanded.value
+                    props.data.expanded.value = !props.data.expanded.value
                 }
                 onKeyDown = ::keyDown
             }
@@ -110,13 +110,13 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
                 flexDirection = FlexDirection.row
                 position = Position.relative
                 cursor = Cursor.pointer
-                if (props.expanded())
+                if (props.data.expanded())
                     zIndex = ZIndex.Input()
             }
-            expandButton(props.expanded())
+            expandButton(props.data.expanded())
             listOf(
-                props.startDate().formatDate,
-                "${props.startTime().formatHhMm} - ${props.endTime().formatHhMm}"
+                props.data.startDate().formatDate,
+                "${props.data.startTime().formatHhMm} - ${props.data.endTime().formatHhMm}"
             ).forEach {
                 styledDiv {
                     css {
@@ -128,14 +128,14 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
                 +it
             }
         }
-        dismisser({ props.expanded.value = false }, visible = props.expanded()) {
+        dismisser({ props.data.expanded.value = false }, visible = props.data.expanded()) {
             css {
                 backgroundColor = Theme().overlay
             }
         }
         styledDiv {
             name = "DateTimeSelectorExpandable"
-            shrinkable(props.expanded(), 50.rem)
+            shrinkable(props.data.expanded(), 50.rem)
             cardStyle()
             css {
                 useColorSet(Theme().content)
@@ -157,8 +157,8 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
                 calendar {
                     attrs {
                         defaultView = "month"
-                        defaultActiveStartDate = props.startDate()
-                        onChange = { props.startDate.value = it }
+                        defaultActiveStartDate = props.data.startDate()
+                        onChange = { props.data.startDate.value = it }
                     }
                 }
             }
@@ -177,48 +177,118 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
                     +"Start time:"
                 }
                 timePicker {
-                    initialTime = props.startTime()
+                    initialTime = props.data.startTime()
                     use24HourTime = true
-                    onChange = { props.startTime.value = it }
+                    onChange = { props.data.startTime.value = it }
                 }
                 label {
                     +"End time:"
                 }
                 timePicker {
-                    initialTime = props.endTime()
+                    initialTime = props.data.endTime()
                     use24HourTime = true
-                    onChange = { props.endTime.value = it }
+                    onChange = { props.data.endTime.value = it }
                 }
-                checkBox("Trim to start/end", props.trimEnds)
-                checkBox("Add timestamp subtitles", props.subTitle)
-                label {
-                    attrs {
-                        htmlFor = "maxDurationSelect"
-                    }
-                    +"Max duration:"
-                }
-                styledSelect {
-                    css {
-                        useColorSet(Theme().content)
-                    }
-                    attrs {
-                        id = "maxDurationSelect"
-                        value = props.maxDuration().toString()
-                        onChangeFunction =
-                            {
-                                val max = it.currentTarget.unsafeCast<HTMLSelectElement>().value.toInt()
-                                props.maxDuration.value = max
-                            }
-                    }
-                    listOf(1, 4, 8, 24).forEach {
-                        styledOption {
+                checkBox("Add timestamp subtitles", props.data.subTitle)
+                if (props.showDuration) {
+                    checkBox("Trim to start/end", props.data.trimEnds)
+                    props.data.maxDuration.let { maxDur ->
+
+                        label {
                             attrs {
-                                value = "$it"
+                                htmlFor = "maxDurationSelect"
                             }
-                            +"$it hour${if (it == 1) "" else "s"}"
+                            +"Max duration:"
+                        }
+                        styledSelect {
+                            css {
+                                useColorSet(Theme().content)
+                            }
+                            attrs {
+                                id = "maxDurationSelect"
+                                value = maxDur.toString()
+                                onChangeFunction =
+                                    {
+                                        val max = it.currentTarget.unsafeCast<HTMLSelectElement>().value.toInt()
+                                        maxDur.value = max
+                                    }
+                            }
+                            listOf(1, 4, 8, 24).forEach {
+                                styledOption {
+                                    attrs {
+                                        value = "$it"
+                                    }
+                                    +"$it hour${if (it == 1) "" else "s"}"
+                                }
+                            }
                         }
                     }
                 }
+            }
+        }
+    }
+
+    interface SelectorState {
+        var startDate: StateVar<Date>
+        var startTime: StateVar<Int>      // time of day in seconds
+        var endTime: StateVar<Int>        // also in seconds
+        var maxDuration: StateVar<Int>
+        var trimEnds: StateVar<Boolean>
+        var subTitle: StateVar<Boolean>
+        var expanded: StateVar<Boolean>
+        var listener: ((Any) -> Unit)?
+
+        val startDateTime: Date
+            get() = startDate().plusSeconds(startTime())
+
+        val endDateTime: Date
+            get() {
+                if (startTime() >= endTime())
+                    return startDate().plusHours(24).plusSeconds(endTime())
+                return startDate().plusSeconds(endTime())
+            }
+    }
+
+    @Serializable
+    data class Saved(
+        var startTime: Int = 0,
+        var endTime: Int = 24 * 60 * 60 - 1,
+        var maxDuration: Int = 1,
+        var trimEnds: Boolean = true,
+        var subTitle: Boolean = false,
+    ) {
+
+
+        fun getState(component: Component<out Props, out State>): SelectorState {
+            val result = object : SelectorState {
+                override var startDate: StateVar<Date> = StateVar(Date().withTime(0, 0), component)
+                override var startTime: StateVar<Int> = StateVar(this@Saved.startTime, component)
+                override var endTime: StateVar<Int> = StateVar(this@Saved.endTime, component)
+                override var maxDuration: StateVar<Int> = StateVar(this@Saved.maxDuration, component)
+                override var trimEnds: StateVar<Boolean> = StateVar(this@Saved.trimEnds, component)
+                override var subTitle: StateVar<Boolean> = StateVar(this@Saved.subTitle, component)
+                override var expanded: StateVar<Boolean> = StateVar(false, component)
+                override var listener: ((Any) -> Unit)? = null
+            }
+            listOf(result.startTime, result.endTime, result.maxDuration, result.trimEnds).forEach { item ->
+                item.listener = { result.listener?.invoke(it) }
+            }
+            result.startDate.listener = {
+                result.expanded.value = false            // close on date selection
+                result.listener?.invoke(it)
+            }
+            return result
+        }
+
+        companion object {
+            fun from(src: SelectorState): Saved {
+                return Saved(
+                    src.startTime(),
+                    src.endTime(),
+                    src.maxDuration(),
+                    src.trimEnds(),
+                    src.subTitle(),
+                )
             }
         }
     }

@@ -29,7 +29,7 @@ interface StreamSource {
     /**
      * Return a url suitable for use as the `src` attribute of a video player element
      */
-    fun getSrcUrl(source: Stream): String?
+    suspend fun getSrcUrl(source: Stream?): String?
 
     /**
      * Stop the dataflow and release any resources
