@@ -16,7 +16,6 @@
 
 package org.moonglass.ui.utility
 
-import kotlinext.js.jso
 import kotlinx.browser.window
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -30,15 +29,20 @@ import org.w3c.dom.events.Event
 object SavedState {
 
     /**
-     * Restore state from localstorage
+     * Restore state from localstorage. If no matching key is found or the deserialisation throws an exception, a
+     * specified default value is created and returned.
      * @receiver The storage key to use
      * @param default A block to create a default value
      * @return The saved object, or the default
      */
 
-    inline fun <reified T : Any> String.restore(default: () -> T ): T {
+    inline fun <reified T : Any> String.restore(default: () -> T): T {
+        console.log("Restoring from key $this")
         return try {
-            window.localStorage.getItem(this)?.let { Json.decodeFromString(it) }
+            window.localStorage.getItem(this)?.let {
+                console.log("Read $it")
+                Json.decodeFromString(it)
+            }
         } catch (ex: Exception) {
             console.log(ex.toString())
             null
@@ -52,7 +56,6 @@ object SavedState {
      */
     inline fun <reified T : Any> save(key: String, data: T) {
         try {
-            console.log("Saving key $key -> $data")
             window.localStorage.setItem(key, Json.encodeToString(data))
         } catch (ex: Exception) {
             console.log("${ex.message}, $data")

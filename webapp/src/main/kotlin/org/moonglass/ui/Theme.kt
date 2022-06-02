@@ -54,6 +54,10 @@ object Theme {
                 override val backgroundColor = header.backgroundColor.lighten(15)
                 override val selectedBackgroundColor: Color = Color.lightSalmon
             }
+            override val scrubBar = object : ColorSet {
+                override val textColor: Color = Color.white
+                override val backgroundColor = Color("#af6c00")
+            }
             override val notifications = object : ColorSet {
                 override val textColor: Color = Color.white
                 override val backgroundColor = Color.black
@@ -87,6 +91,10 @@ object Theme {
                 override val backgroundColor = header.backgroundColor.darken(40)
                 override val selectedBackgroundColor: Color = Color.darkViolet
             }
+            override val scrubBar = object : ColorSet {
+                override val textColor: Color = Color.white
+                override val backgroundColor = Color("#af6c00")
+            }
             override val notifications = object : ColorSet {
                 override val textColor: Color = Color.black
                 override val backgroundColor = Color.white
@@ -112,6 +120,7 @@ object Theme {
         abstract val header: ColorSet
         abstract val subHeader: ColorSet
         abstract val content: ColorSet
+        abstract val scrubBar: ColorSet
         abstract val menu: ColorSet
         abstract val notifications: ColorSet
         abstract val borderColor: Color

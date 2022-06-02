@@ -19,8 +19,9 @@
 
 package org.moonglass.ui.content
 
-import kotlinx.css.LinearDimension
+import csstype.HtmlAttributes
 import kotlinx.css.margin
+import kotlinx.css.pct
 import kotlinx.css.rem
 import kotlinx.html.DIV
 import kotlinx.html.js.onChangeFunction
@@ -44,7 +45,7 @@ import styled.styledSelect
  * Display a tiled view of multiple live sources.
  */
 class LiveView(props: ContentProps) : TiledView<TiledViewState>(props) {
-
+    override val title: String = "Live"
 
     override fun RBuilder.renderNavBarWidget() {
         styledDiv {
@@ -78,19 +79,16 @@ class LiveView(props: ContentProps) : TiledView<TiledViewState>(props) {
         }
     }
 
-    override val layoutKey = "liveViewLayouts"
-
     override fun StyledDOMBuilder<DIV>.addPlayer(
         key: String,
-        stateValue: StateValue<String>,
-        pHeight: LinearDimension
+        stateValue: StateValue<String>
     ) {
         child(StreamPlayer::class) {
             attrs {
                 playerKey = key
                 source = stateValue
-                height = pHeight
                 overlay = true
+                offsetSecs = 0.0
             }
         }
     }

@@ -19,15 +19,22 @@
 
 package org.moonglass.ui.content
 
-import kotlinx.browser.window
 import kotlinx.css.Display
-import kotlinx.css.LinearDimension
+import kotlinx.css.GridTemplateRows
+import kotlinx.css.Position
 import kotlinx.css.display
+import kotlinx.css.gridTemplateRows
+import kotlinx.css.height
 import kotlinx.css.margin
+import kotlinx.css.marginLeft
+import kotlinx.css.pct
+import kotlinx.css.position
 import kotlinx.css.rem
+import kotlinx.css.width
 import kotlinx.html.DIV
 import kotlinx.html.js.onChangeFunction
 import org.moonglass.ui.ContentProps
+import org.moonglass.ui.ResponsiveLayout
 import org.moonglass.ui.Theme
 import org.moonglass.ui.applyState
 import org.moonglass.ui.useColorSet
@@ -35,6 +42,7 @@ import org.moonglass.ui.utility.SavedState
 import org.moonglass.ui.utility.SavedState.restore
 import org.moonglass.ui.utility.StateValue
 import org.moonglass.ui.video.RecordingPlayer
+import org.moonglass.ui.widgets.ScrubBar
 import org.moonglass.ui.widgets.recordings.DateTimeSelector
 import org.w3c.dom.HTMLSelectElement
 import react.RBuilder
@@ -51,6 +59,7 @@ import kotlin.js.Date
  * Display a tiled view of multiple live sources.
  */
 class PlaybackView(props: ContentProps) : TiledView<PlaybackViewState>(props) {
+    override val title: String = "Playback"
 
     private lateinit var timerHandle: Any
     private var lastStartTime: Double = Date().getTime()
@@ -58,12 +67,37 @@ class PlaybackView(props: ContentProps) : TiledView<PlaybackViewState>(props) {
     override fun restoreMyStuff(state: PlaybackViewState) {
         super.restoreMyStuff(state)
         state.selectorState = saveKey.restore { DateTimeSelector.Saved() }.getState(this@PlaybackView)
-        timerHandle = window.setInterval()
+        state.selectorState.listener = ::onStateChange
+    }
+
+    private fun onStateChange(any: Any) {
+        console.log("onStateChange: $any")
+        lastStartTime = Date().getTime()
     }
 
     override fun saveMyStuff() {
         super.saveMyStuff()
         SavedState.save(saveKey, DateTimeSelector.Saved.from(state.selectorState))
+    }
+
+    override fun RBuilder.render() {
+        renderNavBar()
+        styledDiv {
+            css {
+                height = 100.pct
+                width = 100.pct
+                marginLeft = ResponsiveLayout.sideBarReserve
+                position = Position.relative
+                display = Display.grid
+                gridTemplateRows = GridTemplateRows("minmax(0, 1fr) max-content")
+            }
+            renderTiles()
+            child(ScrubBar::class) {
+                attrs {
+                    dateTimeSelector = state.selectorState
+                }
+            }
+        }
     }
 
     override fun RBuilder.renderNavBarWidget() {
@@ -109,21 +143,21 @@ class PlaybackView(props: ContentProps) : TiledView<PlaybackViewState>(props) {
         }
     }
 
-    override val layoutKey = "playbackLayoutKey"
-    private val saveKey = "playbackViewKey"
+    // Don't convert this to a static assignment as the `init()` function gets called before the constructor
+    // is complete. Making this effectively a function rather than a property works.
+    private val saveKey get() = "playbackViewKey"
 
     override fun StyledDOMBuilder<DIV>.addPlayer(
         key: String,
-        stateValue: StateValue<String>,
-        pHeight: LinearDimension
+        stateValue: StateValue<String>
     ) {
         child(RecordingPlayer::class) {
             attrs {
                 dateTimeSelector = state.selectorState
                 playerKey = key
                 source = stateValue
-                height = pHeight
                 overlay = true
+                offsetSecs = (Date().getTime() - lastStartTime) / 1000
             }
         }
     }

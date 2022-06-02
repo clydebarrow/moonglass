@@ -28,7 +28,7 @@ import kotlin.js.Date
 
 class RecordingBuffer : StreamSource {
 
-    var endTime = 0
+    var duration = 24*60*60-1
         set(value) {
             if (field != value) {
                 field = value
@@ -50,19 +50,7 @@ class RecordingBuffer : StreamSource {
             }
         }
 
-    var offset: Int = 0     // an offset for start time, to cater for
-    val offsetStartTime get() = startTime + offset
-
-    val startDateTime: Date get() = startDate.plusSeconds(offsetStartTime)
-
-    // duration in seconds, must allow for wrap over end of day.
-    val durationSecs: Int
-        get() = (endTime - startTime).let {
-            if (it < 0)
-                it + 24 * 60 * 60
-            else
-                it
-        }
+    val startDateTime: Date get() = startDate.plusSeconds(startTime)
 
     private var source: Stream = Stream("", Api.StreamData(), Api.Camera())
 
@@ -75,15 +63,15 @@ class RecordingBuffer : StreamSource {
             recList = null
         }
         val recs =
-            recList ?: (Api.fetchRecording(source, startDate, startTime, endTime) ?: RecList()).also { recList = it }
-        console.log("Fetched recordings: $recList")
+            recList ?: (Api.fetchRecording(source, startDate, startTime, duration) ?: RecList()).also { recList = it }
+        //console.log("Fetched recordings: $recList")
         if (recs.recordings.isEmpty())
             return null
         val firstRec = recs.recordings.first()
         val maxLen = (recs.recordings.last().endTime90k - firstRec.startTime90k)/ 90000
         val startOffset = ((startDateTime.getTime() - firstRec.start.getTime()) / 1000.0).toInt()
             .coerceAtLeast(0)     // base time in seconds
-        val endOffset = (startOffset + durationSecs).coerceAtMost(maxLen.toInt())
+        val endOffset = (startOffset + duration).coerceAtMost(maxLen.toInt())
             return Api.recordingUrl(
                 source.key,
                 firstRec.startId,

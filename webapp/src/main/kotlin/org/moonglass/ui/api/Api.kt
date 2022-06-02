@@ -24,6 +24,8 @@ import io.ktor.client.HttpClient
 import io.ktor.client.features.ClientRequestException
 import io.ktor.client.features.HttpTimeout
 import io.ktor.client.features.json.JsonFeature
+import io.ktor.client.features.json.serializer.KotlinxSerializer
+import  kotlinx.serialization.json.Json
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
@@ -42,7 +44,6 @@ import org.moonglass.ui.App
 import org.moonglass.ui.Duration90k
 import org.moonglass.ui.Time90k
 import org.moonglass.ui.as90k
-import org.moonglass.ui.plusHours
 import org.moonglass.ui.plusSeconds
 import org.moonglass.ui.url
 import org.moonglass.ui.user.User
@@ -59,7 +60,9 @@ data class Api(
     val userData: UserData? = null,
     val signals: List<Signal> = listOf(),
     val signalTypes: List<SignalType> = listOf(),
-    val timeZoneName: String = ""// Australia/Sydney
+    val timeZoneName: String = "",
+    val serverVersion: String = ""
+
 ) {
     @Serializable
     data class Camera(
@@ -112,7 +115,11 @@ data class Api(
             install(HttpTimeout) {
                 requestTimeoutMillis = 10000
             }
-            install(JsonFeature)
+            install(JsonFeature) {
+                serializer = KotlinxSerializer(Json {
+                    ignoreUnknownKeys = true        // allows for API changes
+                })
+            }
         }
 
         /**
@@ -262,19 +269,15 @@ data class Api(
          * @param stream The stream to fetch
          * @param startDate The date to fetch - expected to represent 00:00 on a given date
          * @param startTime The start time in seconds offset from the startDate
-         * @param endTime The end time in seconds - if less than startTime it
-         *                is interpreted as being on the following day
+         * @param duration The recording duration in seconds
          */
         suspend fun fetchRecording(
             stream: Stream,
             startDate: Date,
             startTime: Int,     // seconds
-            endTime: Int
+            duration: Int
         ): RecList? {
-            val endDateTime = if (startTime >= endTime)
-                startDate.plusHours(24).plusSeconds(endTime)
-            else startDate.plusSeconds(endTime)
-            return fetchRecording(stream, startDate.plusSeconds(startTime), endDateTime)
+            return fetchRecording(stream, startDate.plusSeconds(startTime), startDate.plusSeconds(startTime + duration))
         }
 
         /**
@@ -301,9 +304,13 @@ data class Api(
             openId?.let {
                 builder.append("@$openId")
             }
+            builder.append(".")
             startOffset?.let {
-                require(endOffset != null)          // required currently due to bug in server
-                builder.append(".${it * 90000L}-${endOffset * 90000L}")
+                builder.append("${it * 90000L}")
+            }
+            builder.append("-")
+            endOffset?.let {
+                builder.append("${it * 90000L}")
             }
             val params = mutableMapOf<String, String?>(
                 "s" to builder.toString()

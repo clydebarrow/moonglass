@@ -51,7 +51,6 @@ import org.moonglass.ui.dismisser
 import org.moonglass.ui.formatDate
 import org.moonglass.ui.formatHhMm
 import org.moonglass.ui.name
-import org.moonglass.ui.plusHours
 import org.moonglass.ui.plusSeconds
 import org.moonglass.ui.style.checkBox
 import org.moonglass.ui.style.expandButton
@@ -116,7 +115,7 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
             expandButton(props.data.expanded())
             listOf(
                 props.data.startDate().formatDate,
-                "${props.data.startTime().formatHhMm} - ${props.data.endTime().formatHhMm}"
+                "${props.data.startTime().formatHhMm} - ${props.data.endTime.formatHhMm}"
             ).forEach {
                 styledDiv {
                     css {
@@ -185,9 +184,15 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
                     +"End time:"
                 }
                 timePicker {
-                    initialTime = props.data.endTime()
+                    initialTime = props.data.endTime
                     use24HourTime = true
-                    onChange = { props.data.endTime.value = it }
+                    onChange = {
+                        props.data.duration.value = (it - props.data.startTime()).let {
+                            if (it < 0)
+                                it + 24 * 60 * 60
+                            else it
+                        }
+                    }
                 }
                 checkBox("Add timestamp subtitles", props.data.subTitle)
                 if (props.showDuration) {
@@ -231,28 +236,33 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
     interface SelectorState {
         var startDate: StateVar<Date>
         var startTime: StateVar<Int>      // time of day in seconds
-        var endTime: StateVar<Int>        // also in seconds
+        var duration: StateVar<Int>        // also in seconds
         var maxDuration: StateVar<Int>
         var trimEnds: StateVar<Boolean>
         var subTitle: StateVar<Boolean>
         var expanded: StateVar<Boolean>
         var listener: ((Any) -> Unit)?
 
-        val startDateTime: Date
+        var startDateTime: Date
             get() = startDate().plusSeconds(startTime())
+            set(value) {
+                val dur = duration
+                val datePart = value.withTime(0, 0)
+                startTime.value = ((value.getTime() - datePart.getTime()) / 1000).toInt()
+                duration = dur
+            }
 
         val endDateTime: Date
-            get() {
-                if (startTime() >= endTime())
-                    return startDate().plusHours(24).plusSeconds(endTime())
-                return startDate().plusSeconds(endTime())
-            }
+            get() = startDate().plusSeconds(startTime() + duration())
+
+        val endTime: Int
+            get() = (startTime() + duration()) % (24 * 60 * 60)
     }
 
     @Serializable
     data class Saved(
         var startTime: Int = 0,
-        var endTime: Int = 24 * 60 * 60 - 1,
+        var duration: Int = 24 * 60 * 60 - 1,
         var maxDuration: Int = 1,
         var trimEnds: Boolean = true,
         var subTitle: Boolean = false,
@@ -263,14 +273,14 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
             val result = object : SelectorState {
                 override var startDate: StateVar<Date> = StateVar(Date().withTime(0, 0), component)
                 override var startTime: StateVar<Int> = StateVar(this@Saved.startTime, component)
-                override var endTime: StateVar<Int> = StateVar(this@Saved.endTime, component)
+                override var duration: StateVar<Int> = StateVar(this@Saved.duration, component)
                 override var maxDuration: StateVar<Int> = StateVar(this@Saved.maxDuration, component)
                 override var trimEnds: StateVar<Boolean> = StateVar(this@Saved.trimEnds, component)
                 override var subTitle: StateVar<Boolean> = StateVar(this@Saved.subTitle, component)
                 override var expanded: StateVar<Boolean> = StateVar(false, component)
                 override var listener: ((Any) -> Unit)? = null
             }
-            listOf(result.startTime, result.endTime, result.maxDuration, result.trimEnds).forEach { item ->
+            listOf(result.startTime, result.duration, result.maxDuration, result.trimEnds).forEach { item ->
                 item.listener = { result.listener?.invoke(it) }
             }
             result.startDate.listener = {
@@ -284,7 +294,7 @@ class DateTimeSelector : RComponent<DateTimeSelectorProps, State>() {
             fun from(src: SelectorState): Saved {
                 return Saved(
                     src.startTime(),
-                    src.endTime(),
+                    src.duration(),
                     src.maxDuration(),
                     src.trimEnds(),
                     src.subTitle(),

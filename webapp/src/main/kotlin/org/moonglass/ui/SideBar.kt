@@ -33,7 +33,6 @@ import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
 import kotlinx.css.flexWrap
 import kotlinx.css.left
-import kotlinx.css.margin
 import kotlinx.css.opacity
 import kotlinx.css.overflow
 import kotlinx.css.padding
@@ -75,19 +74,17 @@ class SideBar : RComponent<SideBarProps, State>() {
         styledDiv {
             name = "sideBar"
             css {
-                if (ResponsiveLayout.showSideMenu)
-                    position = Position.relative
-                else {
-                    position = Position.absolute
+                position = Position.absolute
+                if (!ResponsiveLayout.showSideMenu) {
                     boxShadow(rgba(0, 0, 0, 0.2), 2.px, 2.px, 2.px, 1.px)
                 }
-                top = 0.px
+                top = ResponsiveLayout.navBarHeight
                 bottom = 0.px
                 left = 0.px
-                margin(top = ResponsiveLayout.navBarEmHeight)
-                if (nowShowing)
-                    width = ResponsiveLayout.sideBarEmWidth
-                else {
+                if (nowShowing) {
+                    width = ResponsiveLayout.sideBarWidth
+                    opacity = 1.0
+                } else {
                     opacity = 0.0
                     width = 0.px
                 }

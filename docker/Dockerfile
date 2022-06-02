@@ -1,4 +1,4 @@
-FROM --platform=$TARGETPLATFORM scottlamb/moonfire-nvr:v0.6.6 AS deploy
+FROM --platform=$TARGETPLATFORM scottlamb/moonfire-nvr:v0.7.3 AS deploy
 LABEL maintainer="clyde@control-j.com"
 ARG INVALIDATE_CACHE_BUILD_DEPLOY=
 ENV LC_ALL=C.UTF-8

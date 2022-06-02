@@ -16,13 +16,22 @@
 
 package org.moonglass.ui
 
+import kotlinx.css.Display
+import kotlinx.css.Position
+import kotlinx.css.display
+import kotlinx.css.height
+import kotlinx.css.marginLeft
+import kotlinx.css.pct
+import kotlinx.css.position
+import kotlinx.css.width
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.utility.StateVar
 import react.Props
 import react.RBuilder
 import react.RComponent
-import react.RPureComponent
 import react.State
+import styled.css
+import styled.styledDiv
 
 external interface ContentProps : Props {
     var api: Api
@@ -31,11 +40,11 @@ external interface ContentProps : Props {
 
 abstract class Content<P : ContentProps, S : State>(props: P) : RComponent<P, S>(props) {
 
-    abstract fun RBuilder.renderNavBarWidget(): Unit
+    abstract fun RBuilder.renderNavBarWidget()
 
-    abstract fun RBuilder.renderContent(): Unit
+    abstract val title: String
 
-    override fun RBuilder.render() {
+    open fun RBuilder.renderNavBar() {
         child(NavBar::class) {
             attrs {
                 api = props.api
@@ -43,7 +52,22 @@ abstract class Content<P : ContentProps, S : State>(props: P) : RComponent<P, S>
                 renderWidget = { it.renderNavBarWidget() }
             }
         }
-        renderContent()
+    }
+
+    /**
+     * Subclasses should override, always calling renderNavBar first.
+     */
+    override fun RBuilder.render() {
+        renderNavBar()
+        styledDiv {
+            css {
+                marginLeft = ResponsiveLayout.sideBarReserve
+                height = 100.pct
+                width = 100.pct
+                display = Display.block
+                position = Position.relative
+            }
+        }
     }
 }
 

@@ -284,7 +284,7 @@ class TimePicker(props: TimePickerProps) : RComponent<TimePickerProps, TimePicke
                 ref = digitRefs[index]
             attrs {
                 if (index == 0)
-                    set("autoFocus", "")
+                    attrs["autoFocus"] = ""
                 onKeyDown = ::keyDown
                 if (index != -1)
                     tabIndex = "0"

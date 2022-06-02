@@ -93,9 +93,6 @@ external interface NavBarProps : Props {
 
 class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
 
-    override fun NavBarState.init(props: NavBarProps) {
-    }
-
     private fun openUser() {
         App.showContextMenu(ContextMenuData(listOf(MenuGroup("", User.menu)), ContextStyle(vert = 4.0, horz = -2.0)))
     }
@@ -137,7 +134,7 @@ class NavBar(props: NavBarProps) : RComponent<NavBarProps, NavBarState>(props) {
                 left = 0.px
                 top = 0.px
                 right = 0.px
-                height = ResponsiveLayout.navBarEmHeight
+                height = ResponsiveLayout.navBarHeight
                 zIndex = ZIndex.NavBar()
             }
 

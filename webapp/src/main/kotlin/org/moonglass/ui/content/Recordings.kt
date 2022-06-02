@@ -131,7 +131,7 @@ data class SavedRecordingState(
 @Suppress("NON_EXPORTABLE_TYPE")
 @JsExport
 class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(props) {
-
+    override val title: String = "Recordings"
     private fun saveMyStuff() {
         SavedState.save(
             saveKey,
@@ -220,13 +220,15 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
         }
     }
 
-    override fun RBuilder.renderContent() {
+    override fun RBuilder.render() {
+        renderNavBar()
         styledDiv {
             css {
                 zIndex = ZIndex.Content()
                 width = 100.pct
                 height = 100.pct
-                paddingTop = ResponsiveLayout.navBarEmHeight
+                paddingTop = ResponsiveLayout.navBarHeight
+                marginLeft = ResponsiveLayout.sideBarReserve
             }
             name = "RecordingsContent"
             styledDiv {
@@ -360,7 +362,8 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                                     backgroundColor = Theme().header.backgroundColor
                                     color = Theme().header.textColor
                                 }
-                                +(state.recordingSource?.caption ?: state.liveSource.value)
+                                +(state.recordingSource?.caption
+                                    ?: state.liveSource.value)
                             }
 
                             child(UrlPlayer::class) {
@@ -373,9 +376,9 @@ class Recordings(props: ContentProps) : Content<ContentProps, RecordingsState>(p
                         } else {
                             child(StreamPlayer::class) {
                                 attrs {
-                                    height = ResponsiveLayout.contentHeight - 4.rem
                                     source = state.liveSource
                                     overlay = false
+                                    offsetSecs = 0.0
                                 }
                             }
                         }

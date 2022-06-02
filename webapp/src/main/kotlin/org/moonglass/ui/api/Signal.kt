@@ -35,8 +35,8 @@ data class SignalType(
 @Serializable
 data class Signal(
     val id: Int, // 1
+    val uuid: String,
     val shortName: String, // driveway motion
-    val source: String,
     val cameras: Map<String, Association>,
     val days: Map<String, Api.Day> = mapOf(),
     val type: String // ee66270f-d9c6-4819-8b33-9720d4cbca6b

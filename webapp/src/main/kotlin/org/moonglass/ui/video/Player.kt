@@ -24,7 +24,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.css.LinearDimension
 import kotlinx.css.PointerEvents
 import kotlinx.css.Position
 import kotlinx.css.TextAlign
@@ -53,6 +52,7 @@ import org.moonglass.ui.Theme
 import org.moonglass.ui.ZIndex
 import org.moonglass.ui.api.Api
 import org.moonglass.ui.applyState
+import org.moonglass.ui.muted
 import org.moonglass.ui.useColorSet
 import org.moonglass.ui.utility.StateValue
 import org.w3c.dom.HTMLElement
@@ -72,10 +72,10 @@ import styled.styledSelect
 import styled.styledVideo
 
 external interface PlayerProps : Props {
-    var height: LinearDimension
     var playerKey: String
     var source: StateValue<String>          // the stream key, updatable
     var overlay: Boolean                    // should the selector overlay the video?
+    var offsetSecs: Double         // time offset in seconds
 }
 
 external interface PlayerState : State {
@@ -85,7 +85,7 @@ external interface PlayerState : State {
     var currentSource: String?      // updated to equal props.source after srcUrl updated
 }
 
-abstract class Player<P : PlayerProps, S: PlayerState>(props: P) : RComponent<P, S>(props) {
+abstract class Player<P : PlayerProps, S : PlayerState>(props: P) : RComponent<P, S>(props) {
 
     private var job: Job? = null
 
@@ -95,6 +95,7 @@ abstract class Player<P : PlayerProps, S: PlayerState>(props: P) : RComponent<P,
 
     /**
      * A hook for the video element.
+     *
      */
 
     private val videoRef = createRef<HTMLVideoElement>()
@@ -133,20 +134,21 @@ abstract class Player<P : PlayerProps, S: PlayerState>(props: P) : RComponent<P,
     }
 
     protected open fun updateSrcUrl() {
-        if(job?.isActive == true) {
+        if (job?.isActive == true) {
             console.log("job still running")
             return
         }
         val newSource = props.source()
-        console.log("Player: updateSrcIrl called, source = $newSource")
         Api.allStreams[newSource]?.let { source ->
             job = scope.launch {
                 val url = streamSource.getSrcUrl(source)
-                console.log("srcUrl ${state.srcUrl} becomes $url")
+                //console.log("srcUrl ${state.srcUrl} becomes $url")
                 if (state.srcUrl != url) {
                     applyState({
-                        console.log("Starting play for $url")
-                        videoRef.current?.play()?.catch { }        // start play after state update
+                        videoRef.current?.let { it ->
+                            it.play().catch { }        // start play after state update
+                            it.currentTime = props.offsetSecs
+                        }
                     }) {
                         currentSource = newSource
                         srcUrl = url
@@ -157,22 +159,19 @@ abstract class Player<P : PlayerProps, S: PlayerState>(props: P) : RComponent<P,
     }
 
     override fun RBuilder.render() {
-        val videoHeight: LinearDimension
         val selectorPosition: Position
         val selectorOpacity: Double
         if (props.overlay) {
-            videoHeight = props.height - 3.rem
             selectorPosition = Position.absolute
             selectorOpacity = if (state.isSelectorShowing) 1.0 else 0.0
         } else {
-            videoHeight = props.height
             selectorPosition = Position.relative
             selectorOpacity = 1.0
         }
         styledDiv {
             css {
                 width = 100.pct
-                height = props.height
+                height = 100.pct
                 position = Position.relative
             }
             attrs {
@@ -240,13 +239,13 @@ abstract class Player<P : PlayerProps, S: PlayerState>(props: P) : RComponent<P,
                 css {
                     useColorSet(Theme().content)
                     width = 100.pct
-                    height = videoHeight
+                    height = 100.pct
                     position = Position.relative
                     zIndex = ZIndex.Content.index
                     pointerEvents = PointerEvents.none
                 }
                 attrs {
-                    set("muted", true)
+                    muted = true
                     autoPlay = true
                     autoBuffer = true
                     controls = false

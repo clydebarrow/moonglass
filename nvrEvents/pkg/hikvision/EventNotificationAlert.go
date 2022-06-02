@@ -66,7 +66,13 @@ func HikListen(camera HikCamera) {
 		log.Fatalln(err)
 		return
 	}
+    hdrs := resp.Header
+    // loop over keys and values in the map.
+    for k, v := range hdrs {
+        fmt.Println(k, "value is", v)
+    }
 	hdr := resp.Header.Get("Content-Type")
+    println("Content-type=", hdr)
 	boundary := strings.Split(hdr, "boundary=")[1]
 	reader := multipart.NewReader(resp.Body, boundary)
 	for {

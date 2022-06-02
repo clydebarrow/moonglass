@@ -23,11 +23,16 @@ import kotlinx.coroutines.launch
 import kotlinx.css.Display
 import kotlinx.css.FlexDirection
 import kotlinx.css.Position
+import kotlinx.css.bottom
 import kotlinx.css.display
 import kotlinx.css.flexDirection
 import kotlinx.css.flexGrow
 import kotlinx.css.height
+import kotlinx.css.left
 import kotlinx.css.position
+import kotlinx.css.px
+import kotlinx.css.right
+import kotlinx.css.top
 import kotlinx.css.vh
 import kotlinx.css.vw
 import kotlinx.css.width
@@ -110,16 +115,18 @@ class App() : RComponent<Props, AppState>() {
 
     override fun RBuilder.render() {
         styledDiv {
+            name = "App"
             css {
                 if (Theme().isDark)
                     put("color-scheme", "dark")
-                position = Position.relative
-                flexGrow = 1.0
-                display = Display.flex
-                flexDirection = FlexDirection.row
                 width = 100.vw
                 height = 100.vh
                 zIndex = ZIndex.Content()
+                position = Position.fixed
+                bottom = 0.px
+                right = 0.px
+                top = 0.px
+                left = 0.px
             }
             child(SideBar::class) {
                 attrs {

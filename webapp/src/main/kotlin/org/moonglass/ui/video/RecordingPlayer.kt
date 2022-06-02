@@ -23,11 +23,9 @@ import org.moonglass.ui.widgets.recordings.DateTimeSelector
 
 external interface RecordingPlayerProps : PlayerProps {
     var dateTimeSelector: DateTimeSelector.SelectorState
-    var offset: Int         // time offset in seconds
 }
 
-external interface RecordingPlayerState : PlayerState {
-}
+external interface RecordingPlayerState : PlayerState
 
 class RecordingPlayer(props: RecordingPlayerProps) : Player<RecordingPlayerProps, RecordingPlayerState>(props) {
     override val streamSource = RecordingBuffer()
@@ -39,7 +37,7 @@ class RecordingPlayer(props: RecordingPlayerProps) : Player<RecordingPlayerProps
             state.currentSource != props.source() ||
             props.dateTimeSelector.startDate() != streamSource.startDate ||
             props.dateTimeSelector.startTime() != streamSource.startTime ||
-            props.dateTimeSelector.endTime() != streamSource.endTime
+            props.dateTimeSelector.duration() != streamSource.duration
         )
             updateSrcUrl()
     }
@@ -47,7 +45,7 @@ class RecordingPlayer(props: RecordingPlayerProps) : Player<RecordingPlayerProps
     override fun updateSrcUrl() {
         streamSource.startDate = props.dateTimeSelector.startDate()
         streamSource.startTime = props.dateTimeSelector.startTime()
-        streamSource.endTime = props.dateTimeSelector.endTime()
+        streamSource.duration = props.dateTimeSelector.duration()
         super.updateSrcUrl()
     }
 }

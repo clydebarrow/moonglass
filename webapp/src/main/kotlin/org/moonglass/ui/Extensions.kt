@@ -16,8 +16,6 @@
 
 package org.moonglass.ui
 
-import kotlinx.browser.window
-import kotlinx.coroutines.await
 import kotlinx.css.Color
 import kotlinx.css.Display
 import kotlinx.css.LinearDimension
@@ -34,7 +32,6 @@ import kotlinx.css.opacity
 import kotlinx.css.padding
 import kotlinx.css.pointerEvents
 import kotlinx.css.position
-import kotlinx.css.properties.LineHeight
 import kotlinx.css.properties.boxShadow
 import kotlinx.css.properties.transition
 import kotlinx.css.px
@@ -46,8 +43,9 @@ import kotlinx.css.width
 import kotlinx.css.zIndex
 import kotlinx.html.DIV
 import kotlinx.html.IMG
+import kotlinx.html.VIDEO
+import kotlinx.html.attributes.TickerAttribute
 import kotlinx.html.js.onClickFunction
-import kotlinx.serialization.decodeFromString
 import org.moonglass.ui.user.UserPreferences
 import react.Component
 import react.Props
@@ -323,3 +321,10 @@ fun StyledDOMBuilder<IMG>.imageSrc(image: String, width: LinearDimension, height
         src = path.replace(".svg", ".png")     // TODO This is just because the Moonfire http server doesn't like svg
     }
 }
+
+
+var VIDEO.muted: Boolean
+    get() = TickerAttribute().get(this, "muted")
+    set(newValue) {
+        TickerAttribute().set(this, "muted", newValue)
+    }

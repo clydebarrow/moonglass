@@ -16,7 +16,6 @@
 
 package org.moonglass.ui
 
-import kotlinext.js.getOwnPropertyNames
 import kotlinx.browser.window
 import kotlinx.css.LinearDimension
 import kotlinx.css.properties.s
@@ -60,26 +59,26 @@ object ResponsiveLayout {
     /** The height of the navbar
      *
      */
-    val navBarEmHeight = 4.rem        // height in ems
-    val sideBarEmWidth = 12.rem
+    val navBarHeight = 4.rem        // height of nav bar
+    val sideBarWidth = 12.rem       // width of sidebar.
 
-    val sideBarActualWidth get() = if (showSideMenu) sideBarEmWidth else 0.rem
+    val sideBarReserve get() = if (showSideMenu) sideBarWidth else 0.rem
 
-    val outerHeight get() = 100.vh - navBarEmHeight
+    val outerHeight get() = 100.vh - navBarHeight
 
     val contentHeight: LinearDimension
         get() {
             return if (isPortrait)
-                (100.vh - navBarEmHeight) / 2
+                (100.vh - navBarHeight) / 2
             else
-                100.vh - navBarEmHeight
+                100.vh - navBarHeight
         }
 
     val contentWidth
         get() = if (isPortrait)
-            100.vw - sideBarEmWidth
+            100.vw - sideBarWidth
         else
-            (100.vw - sideBarEmWidth) / 2
+            (100.vw - sideBarWidth) / 2
 
     val playerHeight get() = contentHeight     // make them the same for now
 }
